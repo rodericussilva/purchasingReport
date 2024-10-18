@@ -69,8 +69,8 @@
 
               <div class="row mb-3">
                 <div class="col-md-4">
-                  <label for="fornecedores" class="form-label text-light">Fornecedores</label>
-                  <select id="fornecedores" class="form-select">
+                  <label for="suppliers" class="form-label text-light">Fornecedores</label>
+                  <select id="suppliers" class="form-select">
                       <option value="" disabled selected>Selecione um fornecedor</option>
                   </select>
                 </div> <br>
@@ -108,6 +108,7 @@
                         <th>Est. Supr.</th>
                         <th>Est. Disponível</th>
                         <th>Sugestão de Compra</th>
+                        <th>Valor de Compra</th>
                     </tr>
                     <tr>
                         <th></th> <!-- Célula vazia para alinhar -->
@@ -115,6 +116,7 @@
                         <th class="month">Mês 1</th> <!-- Último mês -->
                         <th class="month">Mês 2</th> <!-- Penúltimo mês -->
                         <th class="month">Mês 3</th> <!-- Antepenúltimo mês -->
+                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
@@ -147,7 +149,6 @@
 
   <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
-  <!-- Vendor JS Files -->
   <script src="/frontend/assets/vendor/apexcharts/apexcharts.min.js"></script>
   <script src="/frontend/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="/frontend/assets/vendor/chart.js/chart.umd.js"></script>
@@ -158,8 +159,9 @@
   <script src="/frontend/assets/vendor/php-email-form/validate.js"></script>
   <script src="./assets/js/suggestions.js"></script>
 
-  <!-- Template Main JS File -->
-  <script src="/frontend/assets/js/main.js"></script>
+  <script src="./assets/js/main.js"></script>
+  <script src="./assets/js/config.js"></script>
+  <script src="./assets/js/suggestions.js"></script>
 
 </body>
 
