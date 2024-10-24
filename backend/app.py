@@ -1,7 +1,7 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import fetch_suppliers
+from models import fetch_suppliers, fetch_product_supplires
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +14,18 @@ def get_suppliers():
     try:
         suppliers = fetch_suppliers()
         return jsonify(suppliers), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products', methods=['GET'])
+def get_products():
+    try:
+        supplier_name = request.args.get('supplier_name')
+        if not supplier_name:
+            return jsonify({'error': 'Fornecedor não especificado'}), 400
+        
+        produtos = fetch_product_supplires(supplier_name)
+        return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
