@@ -1254,3 +1254,11 @@ h6 {
 .month {
   font-size: 11px;
 }
+
+.table td {
+  text-align: center; /* Centraliza o texto nas células */
+}
+
+.table th {
+  text-align: center; /* Centraliza o texto nos cabeçalhos */
+}

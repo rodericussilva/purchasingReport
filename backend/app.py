@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_product_supplires
+from models import fetch_suppliers, fetch_product_supplires, fetch_month_abbreviations
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,6 +28,11 @@ def get_products():
         return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/month-abbreviations', methods=['GET'])
+def get_month_abbreviations():
+    month_abbreviations = fetch_month_abbreviations()
+    return jsonify(month_abbreviations)
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')

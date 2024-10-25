@@ -22,7 +22,7 @@ def fetch_product_supplires(supplier_name):
     cursor = connection.cursor()
 
     query = """
-        SELECT 
+        SELECT DISTINCT
             Desc_Prod AS descricao,
             Qtd_VenMes0,
             Qtd_VenMes1,
@@ -48,3 +48,27 @@ def fetch_product_supplires(supplier_name):
     cursor.close()
     connection.close()
     return products
+
+def fetch_month_abbreviations():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    
+    query = """
+        SELECT 
+            Des_VenMes2 AS mes3,
+            Des_VenMes1 AS mes2,
+            Des_VenMes0 AS mes1
+        FROM vw_fabri_produt
+    """
+    
+    cursor.execute(query)
+    result = cursor.fetchone()
+    
+    cursor.close()
+    connection.close()
+    
+    return {
+        'mes3': result.mes3,
+        'mes2': result.mes2,
+        'mes1': result.mes1
+    }
