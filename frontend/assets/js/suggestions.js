@@ -33,32 +33,61 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(products => {
                 dataTable.innerHTML = ''; // Limpa a tabela antes de adicionar os novos dados
-
+    
                 products.forEach(product => {
                     const row = document.createElement('tr');
-
+    
+                    // Coluna Descrição
                     const descricaoCell = document.createElement('td');
                     descricaoCell.textContent = product.descricao;
                     row.appendChild(descricaoCell);
-
-                    // Adicione aqui as células vazias ou com valores padrão para os demais dados da tabela
+    
+                    // Coluna Cobertura (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Cobertura
-                    row.appendChild(document.createElement('td')); // Mês 1
-                    row.appendChild(document.createElement('td')); // Mês 2
-                    row.appendChild(document.createElement('td')); // Mês 3
+    
+                    // Coluna Unidades Faturadas
+                    const unidadesFaturadasCell = document.createElement('td');
+                    unidadesFaturadasCell.textContent = product.unidades_faturadas_mes1 || 0; // Mes1
+                    row.appendChild(unidadesFaturadasCell);
+    
+                    // Colunas para Unidades Faturadas Mes2 e Mes3
+                    const mes2Cell = document.createElement('td');
+                    mes2Cell.textContent = product.unidades_faturadas_mes2 || 0; // Mes2
+                    row.appendChild(mes2Cell);
+    
+                    const mes3Cell = document.createElement('td');
+                    mes3Cell.textContent = product.unidades_faturadas_mes3 || 0; // Mes3
+                    row.appendChild(mes3Cell);
+    
+                    // Coluna Méd. Mês (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Méd. Mês
+    
+                    // Coluna Est. Min. (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Est. Min.
+    
+                    // Coluna Est. Supr. (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Est. Supr.
+    
+                    // Coluna Est. Disponível (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Est. Disponível
+    
+                    // Coluna Sugestão de Compra (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Sugestão de Compra
+    
+                    // Coluna Valor de Compra (sem dados por enquanto)
                     row.appendChild(document.createElement('td')); // Valor de Compra
-                    row.appendChild(document.createElement('td'));
-
+    
+                    // Coluna Curva
+                    const curvaCell = document.createElement('td');
+                    curvaCell.textContent = product.curva || 'N/A'; // Curva
+                    row.appendChild(curvaCell);
+    
                     dataTable.appendChild(row);
                 });
             })
             .catch(error => console.error('Erro ao carregar produtos:', error));
     }
+        
 
     suppliersSelect.addEventListener('change', function() {
         const selectedSupplier = suppliersSelect.value;
