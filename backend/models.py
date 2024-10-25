@@ -5,7 +5,7 @@ def fetch_suppliers():
     cursor = connection.cursor()
     query = """
         SELECT DISTINCT Fantasia AS nome
-        FROM vw_fabri_prod
+        FROM vw_fabri_produ
         ORDER BY Fantasia ASC
     """
     cursor.execute(query)
@@ -23,7 +23,7 @@ def fetch_product_supplires(supplier_name):
     
     query = """
         SELECT Desc_Prod AS descricao
-        FROM vw_fabri_prod
+        FROM vw_fabri_produ
         WHERE Fantasia = ?
         ORDER BY descricao ASC
     """
@@ -34,3 +34,4 @@ def fetch_product_supplires(supplier_name):
     cursor.close()
     connection.close()
     return products
+

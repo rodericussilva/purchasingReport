@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.appendChild(document.createElement('td')); // Est. Disponível
                     row.appendChild(document.createElement('td')); // Sugestão de Compra
                     row.appendChild(document.createElement('td')); // Valor de Compra
+                    row.appendChild(document.createElement('td'));
 
                     dataTable.appendChild(row);
                 });
