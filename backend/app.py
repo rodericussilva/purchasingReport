@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_product_suppliers
+from models import fetch_suppliers, fetch_products_by_supplier
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,7 +24,7 @@ def get_products():
         if not supplier_name:
             return jsonify({'error': 'Fornecedor não especificado'}), 400
         
-        produtos = fetch_product_suppliers(supplier_name)
+        produtos = fetch_products_by_supplier(supplier_name)
         return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
