@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const { mes0, mes1, mes2, mes3 } = products[0].mes_labels;
 
                     // Atualiza os cabeçalhos da tabela com os rótulos dos meses
-                    document.querySelector('th.month.text-center:nth-child(3)').textContent = mes0;
-                    document.querySelector('th.month.text-center:nth-child(4)').textContent = mes1;
-                    document.querySelector('th.month.text-center:nth-child(5)').textContent = mes2;
-                    document.querySelector('th.month.text-center:nth-child(6)').textContent = mes3;
+                    document.querySelector('th.month.text-center:nth-child(3)').textContent = mes3;
+                    document.querySelector('th.month.text-center:nth-child(4)').textContent = mes2;
+                    document.querySelector('th.month.text-center:nth-child(5)').textContent = mes1;
+                    document.querySelector('th.month.text-center:nth-child(6)').textContent = mes0;
                 }
 
                 products.forEach(product => {

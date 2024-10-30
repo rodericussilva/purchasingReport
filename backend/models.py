@@ -52,6 +52,8 @@ def fetch_products_by_supplier(supplier_name):
 
     products = []
     for row in result:
+
+        formatted_value = f"R$ {float(row.Prc_UniCom):,.2f}".replace(".", ",")
         products.append({
             'descricao': row.Descricao,
             'unidades_faturadas_mes0': row.Qtd_FatMes0,
@@ -63,7 +65,7 @@ def fetch_products_by_supplier(supplier_name):
             'estoque_suprimento': row.Qtd_Ressup,
             'estoque_disponivel': row.Qtd_Dispon,
             'sugestao_compra': row.Qtd_Sugest,
-            'valor_compra': row.Prc_UniCom,
+            'valor_compra': formatted_value,
             'curva': row.Sta_AbcUniVenFab,
             'mes_labels': {
                 'mes0': last_four_months[3],
