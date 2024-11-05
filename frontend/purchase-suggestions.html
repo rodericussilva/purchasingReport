@@ -68,22 +68,28 @@
               <h5 class="card-title">Sugestão de Compras</h5>
 
               <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label for="suppliers" class="form-label text-light">Fornecedores</label>
                   <select id="suppliers" class="form-select">
                       <option value="" disabled selected>Selecione um fornecedor</option>
                   </select>
                 </div> <br>
                 
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label for="diasReposicao" class="form-label text-light">Dias de Reposição</label>
-                  <input type="number" id="diasReposicao" class="form-control" placeholder="Digite os dias">
+                  <input type="number" id="replacementDays" class="form-control" placeholder="Digite os dias">
                 </div>  <br>
 
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <label for="diasSuprimento" class="form-label text-light">Dias de Suprimento</label>
-                  <input type="number" id="diasSuprimento" class="form-control" placeholder="Digite os dias">
+                  <input type="number" id="supplyDays" class="form-control" placeholder="Digite os dias">
                 </div> <br>
+
+                <div class="col-md-3">
+                  <label for="diasSuprimento" class="form-label text-light black-text">Enviar</label>
+                  <button id="calculate-button" class="btn btn-primary">Calcular Sugestões de Compra</button>
+                </div>
+
               </div>
 
               <!-- Table with stripped rows -->
@@ -95,20 +101,18 @@
                         <th class="text-center" colspan="4">Unidades Faturadas</th>
                         <th class="text-center">Méd. Mês</th>
                         <th class="text-center">Est. Min.</th>
-                        <th class="text-center">Est. Supr.</th>
                         <th class="text-center">Est. Disponível</th>
                         <th class="text-center">Sugestão de Compra</th>
                         <th class="text-center">Valor de Compra</th>
                         <th class="text-center">Curva</th>
                     </tr>
                     <tr>
-                        <th class="text-center"> - </th> <!-- Célula vazia para alinhar -->
-                        <th class="text-center"> - </th> <!-- Célula vazia para alinhar -->
-                        <th class="month text-center">Mês 0</th> <!-- Último mês -->
-                        <th class="month text-center">Mês 1</th> <!-- Penúltimo mês -->
-                        <th class="month text-center">Mês 2</th> <!-- Antepenúltimo mês -->
-                        <th class="month text-center">Mês 3</th>
+                        <th class="text-center"> - </th> 
                         <th class="text-center"> - </th>
+                        <th class="month text-center">Mês 0</th>
+                        <th class="month text-center">Mês 1</th>
+                        <th class="month text-center">Mês 2</th>
+                        <th class="month text-center">Mês 3</th>
                         <th class="text-center"> - </th>
                         <th class="text-center"> - </th>
                         <th class="text-center"> - </th>
@@ -118,7 +122,7 @@
                     </tr>
                 </thead>
                 <tbody id="data-table">
-                    <!-- Os dados da tabela serão preenchidos dinamicamente aqui -->
+                    <!-- dynamic table values -->
                 </tbody>
               </table>
               <!-- End Table with stripped rows -->
@@ -129,7 +133,7 @@
       </div>
     </section>
 
-  </main><!-- End #main -->
+  </main>
 
   <footer id="footer" class="footer">
     <div class="copyright">

@@ -21,10 +21,13 @@ def get_suppliers():
 def get_products():
     try:
         supplier_name = request.args.get('supplier_name')
+        replacement_days = int(request.args.get('replacement_days', 0))
+        supply_days = int(request.args.get('supply_days', 0))
+
         if not supplier_name:
             return jsonify({'error': 'Fornecedor não especificado'}), 400
-        
-        produtos = fetch_products_by_supplier(supplier_name)
+
+        produtos = fetch_products_by_supplier(supplier_name, replacement_days, supply_days)
         return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
