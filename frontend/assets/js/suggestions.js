@@ -88,35 +88,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Lógica para geração de relatórios em diferentes formatos
-    generateReportButton.addEventListener('click', function () {
-        const format = fileFormatSelect.value;
-        if (!format) {
-            alert("Por favor, selecione um formato de relatório.");
-            return;
-        }
+    generateReportButton.addEventListener('click', async () => {
+        const suppliers = document.getElementById("suppliers").value;
+        const replacementDays = document.getElementById("replacementDays").value;
+        const supplyDays = document.getElementById("supplyDays").value;
 
-        fetch(`/generate-report?format=${format}`, {
-            method: 'GET',
-        })
-        .then(response => {
-            if (response.ok) return response.blob();
-            throw new Error("Erro ao gerar relatório.");
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `relatorio.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        })
-        .catch(error => {
-            console.error(error);
-            alert("Erro ao gerar relatório. Por favor, tente novamente.");
+        // Extrair dados da tabela
+        const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
+            [...row.querySelectorAll("td")].map(cell => cell.innerText)
+        );
+
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate_report`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ supplier: suppliers, replacement_days: replacementDays, supply_days: supplyDays, table_data: dataTable })
         });
+
+        const data = await response.json();
+        if (data) {
+            window.open(data.pdf, "_blank");
+            window.open(data.excel, "_blank");
+            window.open(data.csv, "_blank");
+        }
     });
 
     getSuppliers();
 });
+
+// document.getElementById("generate-report-button").addEventListener("click", async () => {
+//     const suppliers = document.getElementById("suppliers").value;
+//     const daysReplacement = document.getElementById("days-replacement").value;
+//     const daysSupply = document.getElementById("days-supply").value;
+
+//     // Extrair dados da tabela
+//     const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
+//         [...row.querySelectorAll("td")].map(cell => cell.innerText)
+//     );
+
+//     console.log("Tabela de dados para o relatório:", dataTable);
+
+//     const response = await fetch("/generate_report", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ suppliers, dias_reposicao: daysReplacement, dias_suprimento: daysSupply, tabela_dados: dataTable })
+//     });
+    
+//     const data = await response.json();
+//     if (data) {
+//         window.open(data.pdf, "_blank");
+//         window.open(data.excel, "_blank");
+//         window.open(data.csv, "_blank");
+//     }
+// });

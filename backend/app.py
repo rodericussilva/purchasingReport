@@ -1,13 +1,22 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from models import fetch_suppliers, fetch_products_by_supplier
+from routes.reports import report
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'reports_files')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.register_blueprint(report, url_prefix='/api')
 
 @app.route('/api/suppliers', methods=['GET'])
 def get_suppliers():
@@ -31,6 +40,10 @@ def get_products():
         return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/static/reports_files/<path:filename>')
+def serve_report(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')
