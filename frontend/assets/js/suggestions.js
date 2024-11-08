@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const suppliers = document.getElementById("suppliers").value;
         const replacementDays = document.getElementById("replacementDays").value;
         const supplyDays = document.getElementById("supplyDays").value;
+        const fileFormat = fileFormatSelect.value;
 
         // Extrair dados da tabela
         const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
@@ -101,14 +102,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate_report`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ supplier: suppliers, replacement_days: replacementDays, supply_days: supplyDays, table_data: dataTable })
+            body: JSON.stringify({ supplier: suppliers, replacement_days: replacementDays, supply_days: supplyDays, table_data: dataTable, file_format: fileFormat })
         });
 
         const data = await response.json();
-        if (data) {
-            window.open(data.pdf, "_blank");
-            window.open(data.excel, "_blank");
-            window.open(data.csv, "_blank");
+        if (data && data.file_path) {
+            window.open(data.file_path, "_blank");  // Abre apenas o arquivo gerado no formato correto
         }
     });
 

@@ -1,31 +1,41 @@
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 load_dotenv()
 
 REPORTS_DIR = os.path.join(os.getcwd(), 'static', 'reports_files')
 
 def generate_pdf(supplier, replacement_days, supply_days, table_data):
-    pdf_path = os.path.join(REPORTS_DIR, f'report_{supplier}.pdf')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_path = os.path.join(REPORTS_DIR, f'report_{supplier}_{timestamp}.pdf')
     
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR)
 
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
-
-    c.drawImage("static/logo-removebg-preview.png", 50, height - 100, width=50, height=50)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(150, height - 70, "Tabela de Sugestões de Compras")
+    c = canvas.Canvas(pdf_path, pagesize=landscape(A4))
+    width, height = landscape(A4)
     
+    # Logo e nome da empresa
+    logo_path = "static/logo-removebg-preview.png"  # Caminho da logo
+    logo_width, logo_height = 50, 50  # Ajustar tamanho da logo
+    
+    c.drawImage(logo_path, 50, height - 100, width=logo_width, height=logo_height)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(120, height - 70, "TS DISTRIBUIDORA")  # Nome da empresa ao lado da logo
+    
+    # Título do relatório
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(300, height - 70, "Tabela de Sugestões de Compras")
+    
+    # Informações adicionais (na mesma linha)
     c.setFont("Helvetica", 12)
-    c.drawString(50, height - 120, f"Fabricante: {supplier}")
-    c.drawString(50, height - 140, f"Dias de Reposição: {replacement_days}")
-    c.drawString(50, height - 160, f"Dias de Suprimento: {supply_days}")
+    info_text = f"Fabricante: {supplier}     Dias de Reposição: {replacement_days}     Dias de Suprimento: {supply_days}"
+    c.drawString(50, height - 120, info_text)
 
-    table_y = height - 200
+    table_y = height - 180
     for i, column in enumerate(["Descrição", "Cobertura", "Mês0", "Mês1", "Mês2", "Mês3", "Média Mês", "Estoque Disponível", "Sugestão de Compra", "Valor de Compra", "Curva"]):
         c.drawString(50 + i * 80, table_y, column)
 
@@ -41,8 +51,9 @@ def generate_pdf(supplier, replacement_days, supply_days, table_data):
 
 from openpyxl import Workbook
 
-def generate_excel(table_data):
-    excel_path = os.path.join(REPORTS_DIR, 'report.xlsx')
+def generate_excel(supplier, replacement_days, supply_days, table_data):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    excel_path = os.path.join(REPORTS_DIR, f'report_{supplier}_{timestamp}.pdf')
     
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR)
@@ -62,18 +73,20 @@ def generate_excel(table_data):
 
 import csv
 
-def generate_csv(table_data):
-    csv_path = os.path.join(REPORTS_DIR, 'report.csv')
+def generate_csv(supplier, table_data):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_path = os.path.join(REPORTS_DIR, f'report_{supplier}_{timestamp}.csv')
     
-    if not os.path.exists(REPORTS_DIR):
-        os.makedirs(REPORTS_DIR)
-    
-    with open(csv_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
+    # Escrevendo os dados no arquivo CSV
+    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
         
+        # Cabeçalho com os meses dinâmicos
         headers = ["Descrição", "Cobertura", "Mês0", "Mês1", "Mês2", "Mês3", "Média Mês", "Estoque Disponível", "Sugestão de Compra", "Valor de Compra", "Curva"]
         writer.writerow(headers)
         
-        writer.writerows(table_data)
-
+        # Adicionando as linhas de dados
+        for row in table_data:
+            writer.writerow(row)
+    
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
