@@ -20,38 +20,90 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
     cursor = connection.cursor()
 
     query = """
-        SELECT  
-            Descricao,
-            Qtd_FatMes0,
-            Qtd_FatMes1,
-            Qtd_FatMes2,
-            Qtd_FatMes3,
-            Media_Fat,
-            Qtd_EstMin,
-            Qtd_Dispon,
-            Prc_Venda AS Prc_UniCom,
-            Sta_AbcUniVenFab,
-            Des_VenMes0,
-            Des_VenMes1,
-            Des_VenMes2,
-            Des_VenMes3
-        FROM vw_dados_compras
-        WHERE Fantasia = ?
-        ORDER BY Descricao ASC
+        SELECT
+	        f.Fantasia,
+            p.Descricao,
+            p.Codigo,
+            pr.Sta_AbcUniVenFab,
+            pr.Sta_AbcValFatFab,
+            ROUND(pr.Prc_Venda, 2) AS Prc_Venda,
+            pr.Qtd_Dispon,
+            pr.Qtd_Fisico,
+            pr.Qtd_Transi,
+            pr.Qtd_EstMin,
+            pr.Dat_UltVen,
+
+                SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) AS Qtd_FatMes0,
+		        LEFT(CASE MONTH(GETDATE())
+			        WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
+			        WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
+			        WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
+			        END, 3) AS Des_VenMes0,
+
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS Qtd_FatMes1,
+		        LEFT(CASE MONTH(DATEADD(MONTH, -1, GETDATE()))
+			        WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
+			        WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
+			        WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
+			        END, 3) AS Des_VenMes1,
+
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS Qtd_FatMes2,
+		        LEFT(CASE MONTH(DATEADD(MONTH, -2, GETDATE()))
+			        WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
+			        WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
+			        WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
+			        END, 3) AS Des_VenMes2,
+
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS Qtd_FatMes3,
+		        LEFT(CASE MONTH(DATEADD(MONTH, -3, GETDATE()))
+			        WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
+			        WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
+			        WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
+			        END, 3) AS Des_VenMes3,
+
+		        ROUND((SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0, 2) AS Media_Fat,
+
+		        ROUND((SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+		        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 90.0, 2) AS Media_Diaria_Trimestre
+        FROM 
+            fVENDAS v
+        JOIN 
+            PRODU p ON v.IDPRODUTO = p.Codigo
+        JOIN
+	        FABRI f ON p.Cod_Fabricante = f.Codigo
+        JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
+        WHERE f.Fantasia = ?
+        GROUP BY 
+	        f.Fantasia,
+            p.Descricao,
+            p.Codigo,
+            pr.Sta_AbcUniVenFab,
+            pr.Sta_AbcValFatFab,
+            pr.Prc_Venda,
+            pr.Qtd_Dispon,
+            pr.Qtd_Fisico,
+            pr.Qtd_Transi,
+            pr.Qtd_EstMin,
+            pr.Dat_UltVen
+        ORDER BY p.Descricao ASC
     """
     cursor.execute(query, (supplier_name,))
     result = cursor.fetchall()
 
     products = []
     for row in result:
-        formatted_price = f"R$ {float(row.Prc_UniCom):,.2f}".replace(".", ",")
+        formatted_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
         formatted_avg = int(row.Media_Fat)
 
         media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else 1
-        cobertura = int(row.Qtd_Dispon / media_faturamento_diario)
+        cobertura = int(formatted_avg / media_faturamento_diario)
 
         dias_suprimento_total = replacement_days + supply_days
-        sugestao_compra = int((media_faturamento_diario * dias_suprimento_total) - row.Qtd_Dispon)
+        sugestao_compra = int((media_faturamento_diario or 0 * dias_suprimento_total) - row.Qtd_Dispon)
 
         products.append({
             'descricao': row.Descricao,
@@ -63,7 +115,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             'estoque_minimo': row.Qtd_EstMin,
             'estoque_disponivel': row.Qtd_Dispon,
             'sugestao_compra': sugestao_compra,
-            'valor_compra': formatted_price,
+            'valor_venda': formatted_price,
             'curva': row.Sta_AbcUniVenFab,
             'cobertura': cobertura,
             'mes_labels': {

@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${product.media_faturada}</td>
                         <td>${product.estoque_disponivel}</td>
                         <td>${product.sugestao_compra}</td>
-                        <td>${product.valor_compra}</td>
+                        <td>${product.valor_venda}</td>
                         <td>${product.curva}</td>
                     `;
 
