@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <td class="text-center">${product.estoque_disponivel}</td>
                 <td class="text-center">${product.estoque_minimo}</td>
                 <td class="text-center">${product.estoque_transito}</td>
+                <td class="text-center">${product.media_diaria_venda}</td>
                 <td class="text-center">${product.curva}</td>
             `;
             dataTableBody.appendChild(row);
