@@ -220,7 +220,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         v.idproduto, 
         v.idfabricante
     ORDER BY 
-        f.Fantasia ASC;
+        p.Descricao ASC;
     """
     
     cursor.execute(query, (supplier_name,))

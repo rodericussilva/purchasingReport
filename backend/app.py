@@ -55,8 +55,7 @@ def get_total_suggestions():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/rupture-risk', methods=['GET'])
-def risco_ruptura():
-    # Obtendo os parâmetros da URL ou de uma requisição GET
+def rupture_risk():
     supplier_name = request.args.get('supplier_name')
     days_estimate = int(request.args.get('days_estimate'))
 

@@ -42,21 +42,32 @@ document.addEventListener("DOMContentLoaded", function () {
         fetch(url.trim())
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                    if (response.status === 404) {
+                        return response.json().then(data => {
+                            if (data.message && data.message === "Nenhum produto encontrado para o fornecedor especificado!") {
+                                alert(`${supplierName} não possui produtos em movimentação no estoque.`);
+                            } else {
+                                alert(`Erro inesperado: ${data.message || "Não foi possível processar a requisição."}`);
+                            }
+                        });
+                    } else {
+                        throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                    }
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.error) {
-                    alert(`Erro no servidor: ${data.error}`);
+                if (Array.isArray(data) && data.length === 0) {
+                    alert(`${supplierName} não possui produtos em movimentação no estoque.`);
+                } else if (data && Array.isArray(data)) {
+                    populateTable(data);
                 } else {
-                    const products = Array.isArray(data) ? data : []; 
-                    populateTable(products);
+                    alert("Erro inesperado ao processar os dados do fornecedor.");
                 }
             })
             .catch(error => {
                 console.error('Erro na requisição:', error);
-                alert(`Erro ao buscar dados: ${error.message}`);
+                alert(`Entrar em contato com o suporte. Erro ao buscar dados: ${error.message}`);
             });
     }
 
