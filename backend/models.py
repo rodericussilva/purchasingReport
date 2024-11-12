@@ -172,3 +172,88 @@ def fetch_total_suggestions():
     cursor.close()
     connection.close()
     return total_suggestions
+
+def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """
+    SELECT 
+        f.Fantasia,
+        p.Descricao,
+        p.Codigo,
+        pr.Sta_AbcUniVenFab,
+        pr.Sta_AbcValFatFab,
+        pr.Qtd_Dispon,
+        pr.Qtd_Fisico,
+        pr.Qtd_Transi,
+        pr.Qtd_EstMin,
+        v.idproduto,
+        v.idfabricante,
+        (SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
+        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) AS Total_Ult_4_meses,
+
+        ROUND(SUM(v.QUANTIDADE) / 90.0, 2) AS media_diaria_venda  -- Média diária de vendas (último trimestre)
+    FROM 
+        fVENDAS v
+    JOIN 
+        PRODU p ON v.IDPRODUTO = p.Codigo
+    JOIN 
+        FABRI f ON p.Cod_Fabricante = f.Codigo
+    JOIN 
+        PRXES pr ON pr.Cod_Produt = p.Codigo
+    WHERE
+        f.Fantasia = ?  -- Filtro para o nome do fornecedor
+        AND v.DATA >= DATEADD(MONTH, -3, GETDATE())  -- Filtra vendas no último trimestre (últimos 3 meses)
+    GROUP BY 
+        f.Fantasia, 
+        p.Descricao, 
+        p.Codigo, 
+        pr.Sta_AbcUniVenFab, 
+        pr.Sta_AbcValFatFab, 
+        pr.Qtd_Dispon, 
+        pr.Qtd_Fisico, 
+        pr.Qtd_Transi, 
+        pr.Qtd_EstMin, 
+        v.idproduto, 
+        v.idfabricante
+    ORDER BY 
+        f.Fantasia ASC;
+    """
+    
+    cursor.execute(query, (supplier_name,))
+    result = cursor.fetchall()
+    
+    products = []
+    
+    for row in result:
+        descricao = row.Descricao
+        estoque_disponivel = row.Qtd_Dispon
+        estoque_fisico = row.Qtd_Fisico
+        estoque_transito = row.Qtd_Transi
+        media_diaria_venda = row.media_diaria_venda
+        estoque_minimo = row.Qtd_EstMin,
+        curva = row.Sta_AbcUniVenFab,
+        total_estoque = estoque_disponivel + estoque_fisico + estoque_transito
+        
+        previsao_vendas = media_diaria_venda * days_estimate
+        risco_ruptura = total_estoque - previsao_vendas
+        
+        products.append({
+            'descricao': descricao,
+            'estoque_fisico': estoque_fisico,
+            'estoque_disponivel': estoque_disponivel,
+            'estoque_transito': estoque_transito,
+            'estoque_minimo': estoque_minimo,
+            'curva': curva,
+            'media_diaria_venda': media_diaria_venda,
+            'previsao_vendas': previsao_vendas,
+            'risco_ruptura': risco_ruptura
+        })
+    
+    cursor.close()
+    connection.close()
+    
+    return products

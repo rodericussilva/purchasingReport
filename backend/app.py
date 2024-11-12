@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -53,6 +53,39 @@ def get_total_suggestions():
         return jsonify({'total_suggestions': total_suggestions}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/rupture-risk', methods=['GET'])
+def risco_ruptura():
+    # Obtendo os parâmetros da URL ou de uma requisição GET
+    supplier_name = request.args.get('supplier_name')
+    days_estimate = int(request.args.get('days_estimate'))
+
+    if not supplier_name or not days_estimate:
+        return jsonify({"error": "Parâmetros 'supplier_name' e 'days_estimate' são obrigatórios!"}), 400
+    
+    try:
+        products = fetch_products_and_calculate_rupture(supplier_name, days_estimate)
+        
+        if not products:
+            return jsonify({"message": "Nenhum produto encontrado para o fornecedor especificado!"}), 404
+
+        response_data = []
+        for product in products:
+            response_data.append({
+                "descricao": product['descricao'],
+                "estoque_disponivel": product['estoque_disponivel'],
+                "estoque_fisico": product['estoque_fisico'],
+                "estoque_transito": product['estoque_transito'],
+                "estoque_minimo": product['estoque_minimo'],
+                "media_diaria_venda": product['media_diaria_venda'],
+                "previsao_vendas": product['previsao_vendas'],
+                "risco_ruptura": product['risco_ruptura']
+            })
+
+        return jsonify(response_data)
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')
