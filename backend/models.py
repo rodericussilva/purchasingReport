@@ -95,6 +95,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
     result = cursor.fetchall()
 
     products = []
+
     for row in result:
         formatted_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
         formatted_avg = int(row.Media_Fat)
@@ -129,3 +130,45 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
     cursor.close()
     connection.close()
     return products
+
+def fetch_total_suggestions():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    replacement_days = 7  # default value to help with the sum
+    supply_days = 14  # default value to help with the sum
+    dias_suprimento_total = replacement_days + supply_days
+
+    query = f"""
+        SELECT COUNT(*) AS total
+        FROM (
+            SELECT 
+                ROUND((SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0, 2) AS media_faturada,
+                
+                pr.Qtd_Dispon,
+
+                -- Calcula sugestao_compra com media_faturada calculada dentro do SELECT
+                ROUND(((SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0 * {dias_suprimento_total}) - pr.Qtd_Dispon, 2) AS sugestao_compra
+
+            FROM fVENDAS v
+            JOIN PRODU p ON v.IDPRODUTO = p.Codigo
+            JOIN FABRI f ON p.Cod_Fabricante = f.Codigo
+            JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
+            GROUP BY p.Codigo, pr.Qtd_Dispon
+        ) AS subquery
+        WHERE sugestao_compra > 0;
+    """
+    
+    cursor.execute(query)
+    result = cursor.fetchall()
+    total_suggestions = int(result[0][0]) if result else 0
+
+    cursor.close()
+    connection.close()
+    return total_suggestions

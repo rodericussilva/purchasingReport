@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -37,6 +37,7 @@ def get_products():
             return jsonify({'error': 'Fornecedor não especificado'}), 400
 
         produtos = fetch_products_by_supplier(supplier_name, replacement_days, supply_days)
+
         return jsonify(produtos), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -44,6 +45,14 @@ def get_products():
 @app.route('/static/reports_files/<path:filename>')
 def serve_report(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/api/total_suggestions', methods=['GET'])
+def get_total_suggestions():
+    try:
+        total_suggestions = fetch_total_suggestions()
+        return jsonify({'total_suggestions': total_suggestions}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')
