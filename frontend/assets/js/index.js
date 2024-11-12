@@ -1,18 +1,41 @@
-document.addEventListener('DOMContentLoaded', function() {
-    fetch(`${CONFIG.API_BASE_URL}/api/total_suggestions`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar os dados');
-            }
-            return response.json();
-        })
+document.addEventListener("DOMContentLoaded", function() {
+    function animateProgress(start, end, duration) {
+      const stepTime = Math.abs(Math.floor(duration / (end - start)));
+      let current = start;
+      const progressElement = document.getElementById("total-suggestions");
+  
+      const interval = setInterval(function() {
+        current += 1;
+        progressElement.innerText = current;
+  
+        if (current >= end) {
+          clearInterval(interval);
+        }
+      }, stepTime);
+    }
+  
+    function loadTotalSuggestions() {
+      const progressElement = document.getElementById("total-suggestions");
+      const loadingSpinner = document.getElementById("loading-spinner");
+      
+      loadingSpinner.style.display = "inline-block";
+  
+      // Chama a API
+      fetch(`${CONFIG.API_BASE_URL}/api/total_suggestions`)
+        .then(response => response.json())
         .then(data => {
-            const totalSuggestions = data.total_suggestions || 0;
-            console.log("Total de sugestões:", totalSuggestions);
-            document.querySelector('.card-body h6').textContent = totalSuggestions;
+          if (data.total_suggestions) {
+            const total = data.total_suggestions;
+            loadingSpinner.style.display = "none";
+            animateProgress(0, total, 2000);
+          }
         })
         .catch(error => {
-            console.error('Erro ao carregar total de sugestões de compra:', error);
-            document.querySelector('.card-body h6').textContent = "Erro ao carregar dados.";
+          console.error("Erro ao carregar total de sugestões de compra:", error);
+          loadingSpinner.style.display = "none";
+          progressElement.innerText = "Erro ao carregar dados";
         });
-});
+    }
+  
+    loadTotalSuggestions();
+});  
