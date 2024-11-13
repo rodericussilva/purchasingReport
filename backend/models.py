@@ -236,7 +236,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         media_diaria_venda = row.media_diaria_venda
         estoque_minimo = row.Qtd_EstMin,
         curva = row.Sta_AbcUniVenFab,
-        total_estoque = estoque_disponivel + estoque_fisico + estoque_transito
+        total_estoque = estoque_disponivel + estoque_transito
         
         previsao_vendas = media_diaria_venda * days_estimate
         risco_ruptura = total_estoque - previsao_vendas
