@@ -94,7 +94,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const supplyDays = document.getElementById("supplyDays").value;
         const fileFormat = fileFormatSelect.value;
 
-        // Extrair dados da tabela
         const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
             [...row.querySelectorAll("td")].map(cell => cell.innerText)
         );
@@ -107,35 +106,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const data = await response.json();
         if (data && data.file_path) {
-            window.open(data.file_path, "_blank");  // Abre apenas o arquivo gerado no formato correto
+            window.open(data.file_path, "_blank");
         }
     });
 
     getSuppliers();
 });
-
-// document.getElementById("generate-report-button").addEventListener("click", async () => {
-//     const suppliers = document.getElementById("suppliers").value;
-//     const daysReplacement = document.getElementById("days-replacement").value;
-//     const daysSupply = document.getElementById("days-supply").value;
-
-//     // Extrair dados da tabela
-//     const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
-//         [...row.querySelectorAll("td")].map(cell => cell.innerText)
-//     );
-
-//     console.log("Tabela de dados para o relatório:", dataTable);
-
-//     const response = await fetch("/generate_report", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ suppliers, dias_reposicao: daysReplacement, dias_suprimento: daysSupply, tabela_dados: dataTable })
-//     });
-    
-//     const data = await response.json();
-//     if (data) {
-//         window.open(data.pdf, "_blank");
-//         window.open(data.excel, "_blank");
-//         window.open(data.csv, "_blank");
-//     }
-// });
