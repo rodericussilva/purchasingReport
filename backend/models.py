@@ -104,7 +104,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
         cobertura = int(formatted_avg / media_faturamento_diario)
 
         dias_suprimento_total = replacement_days + supply_days
-        sugestao_compra = int((media_faturamento_diario or 0 * dias_suprimento_total) - row.Qtd_Dispon)
+        sugestao_compra = int((media_faturamento_diario * dias_suprimento_total) - row.Qtd_Dispon)
 
         products.append({
             'descricao': row.Descricao,
@@ -211,7 +211,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
     JOIN 
         PRXES pr ON pr.Cod_Produt = p.Codigo
     WHERE
-        f.Fantasia = ?  -- Filtro para o nome do fornecedor
+        f.Fantasia = ?
     GROUP BY 
         f.Fantasia, 
         p.Descricao, 
