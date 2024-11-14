@@ -26,7 +26,6 @@ document.addEventListener("DOMContentLoaded", function () {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td class="text-center">${product.descricao}</td>
-                <td class="text-center">${product.estoque_fisico}</td>
                 <td class="text-center">${product.estoque_disponivel}</td>
                 <td class="text-center">${product.estoque_minimo}</td>
                 <td class="text-center">${product.estoque_transito}</td>
@@ -83,6 +82,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
         getRuptureRisk(supplierName, daysEstimate);
     });
+
+    // generateReportButton.addEventListener('click', async () => {
+    //     const suppliers = document.getElementById("suppliers").value;
+    //     const replacementDays = document.getElementById("replacementDays").value;
+    //     const supplyDays = document.getElementById("supplyDays").value;
+    //     const fileFormat = fileFormatSelect.value;
+
+    //     const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
+    //         [...row.querySelectorAll("td")].map(cell => cell.innerText)
+    //     );
+
+    //     const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate-report-risk`, {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({ supplier: suppliers, replacement_days: replacementDays, supply_days: supplyDays, table_data: dataTable, file_format: fileFormat })
+    //     });
+
+    //     const data = await response.json();
+    //     if (data && data.file_path) {
+    //         window.open(data.file_path, "_blank");
+    //     }
+    // });
 
     getSuppliers();
 });

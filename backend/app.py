@@ -78,7 +78,8 @@ def rupture_risk():
                 "estoque_minimo": product['estoque_minimo'],
                 "media_diaria_venda": product['media_diaria_venda'],
                 "previsao_vendas": product['previsao_vendas'],
-                "risco_ruptura": product['risco_ruptura']
+                "risco_ruptura": product['risco_ruptura'],
+                "curva": product['curva']
             })
 
         return jsonify(response_data)
