@@ -1389,7 +1389,7 @@ def fetch_total_rupture_risk(days_estimate):
     for row in result:
         total_stock = row.Qtd_Dispon + row.Qtd_Transi 
         predicted_sales = row.Media_Diaria_Trimestre * days_estimate
-        rupture_risk = total_stock - predicted_sales
+        rupture_risk = (total_stock - predicted_sales) - total_stock if total_stock > 0 else -1
 
         if rupture_risk < 0:
             total_risk_items += 1
