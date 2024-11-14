@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -46,7 +46,7 @@ def get_products():
 def serve_report(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-@app.route('/api/total_suggestions', methods=['GET'])
+@app.route('/api/total-suggestions', methods=['GET'])
 def get_total_suggestions():
     try:
         total_suggestions = fetch_total_suggestions()
@@ -85,6 +85,12 @@ def rupture_risk():
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/rupture-risk-count', methods=['GET'])
+def get_rupture_risk_count():
+    days_estimate = int(request.args.get('days_estimate', 30))  # Valor padrão de 30 dias
+    total_risk_items = fetch_total_rupture_risk(days_estimate)
+    return jsonify({"total_risk_items": total_risk_items})
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')

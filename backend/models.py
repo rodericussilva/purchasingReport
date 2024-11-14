@@ -257,3 +257,51 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
     connection.close()
     
     return products
+
+def fetch_total_rupture_risk(days_estimate):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """
+        SELECT
+            p.Codigo,
+            pr.Qtd_Dispon,
+            pr.Qtd_Transi,
+            pr.Qtd_EstMin,
+            ROUND(
+                (
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
+                ) / 90.0, 2
+            ) AS Media_Diaria_Trimestre
+        FROM 
+            fVENDAS v
+        JOIN 
+            PRODU p ON v.IDPRODUTO = p.Codigo
+        JOIN 
+            PRXES pr ON pr.Cod_Produt = p.Codigo
+        GROUP BY 
+            p.Codigo,
+            pr.Qtd_Dispon,
+            pr.Qtd_Transi,
+            pr.Qtd_EstMin;
+    """
+
+    cursor.execute(query)
+    result = cursor.fetchall()
+
+    total_risk_items = 0
+
+    for row in result:
+        total_stock = row.Qtd_Dispon + row.Qtd_Transi 
+        predicted_sales = row.Media_Diaria_Trimestre * days_estimate
+        rupture_risk = total_stock - predicted_sales
+
+        if rupture_risk < 0:
+            total_risk_items += 1
+
+    cursor.close()
+    connection.close()
+
+    return total_risk_items

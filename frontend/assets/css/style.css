@@ -1256,9 +1256,9 @@ h6 {
 }
 
 .table td {
-  text-align: center; /* Centraliza o texto nas células */
+  text-align: center;
 }
 
 .table th {
-  text-align: center; /* Centraliza o texto nos cabeçalhos */
+  text-align: center; 
 }
