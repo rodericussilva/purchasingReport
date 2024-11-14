@@ -195,7 +195,13 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
         SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) AS Total_Ult_4_meses,
 
-        ROUND(SUM(v.QUANTIDADE) / 90.0, 2) AS media_diaria_venda  -- Média diária de vendas (último trimestre)
+        ROUND(
+                (
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
+                ) / 90.0, 2
+            ) AS media_diaria_venda  -- Média diária de vendas (último trimestre)
     FROM 
         fVENDAS v
     JOIN 
@@ -206,7 +212,6 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         PRXES pr ON pr.Cod_Produt = p.Codigo
     WHERE
         f.Fantasia = ?  -- Filtro para o nome do fornecedor
-        AND v.DATA >= DATEADD(MONTH, -3, GETDATE())  -- Filtra vendas no último trimestre (últimos 3 meses)
     GROUP BY 
         f.Fantasia, 
         p.Descricao, 
