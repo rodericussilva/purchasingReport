@@ -21,57 +21,71 @@ def generate_pdf(supplier, replacement_days, supply_days, table_data):
     def draw_header(c):
         logo_path = "static/logo-removebg-preview.png"
         logo_width, logo_height = 40, 40
-        c.drawImage(logo_path, 50, height - 100, width=logo_width, height=logo_height)
+        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(95, height - 85, "TS DISTRIBUIDORA")
+        c.drawString(105, height - 85, "TS DISTRIBUIDORA")
         c.drawString(300, height - 70, "Tabela de Sugestões de Compras")
         
         c.setFont("Helvetica", 10)
         info_text = f"Fabricante: {supplier}         Dias de Reposição: {replacement_days}         Dias de Suprimento: {supply_days}"
-        c.drawString(50, height - 120, info_text)
+        c.drawString(60, height - 120, info_text)
 
     def draw_table_header(c, table_y):
         c.setFont("Helvetica-Bold", 7)
-        columns = ["Descrição", "Cobertura", "Mês0", "Mês1", "Mês2", "Mês3", "Média Mês", "Estoque Disp.", "Sugestão Compra", "Valor Compra", "Curva"]
+        columns = ["Descrição", "Cobertura", "Mês0", "Mês1", "Mês2", "Mês3", "Média Mês", "Estoque Disponível", "Sugestão de Compra", "Valor de Compra", "Curva"]
         
-        x_position = 50
+        x_position = 60
         for i, column in enumerate(columns):
-            c.drawString(x_position, table_y, column)
-            x_position += col_widths[i] + 1
+            c.drawString(x_position + 5, table_y - 10, column)
+            x_position += col_widths[i]
+
+        # Desenhar bordas do cabeçalho
+        table_width = sum(col_widths)
+        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)  # Retângulo externo do cabeçalho
+
+        # Desenhar linhas verticais no cabeçalho
+        x_position = 60
+        for width in col_widths:
+            c.line(x_position, table_y, x_position, table_y - 20)  # Linhas verticais
+            x_position += width
+
+    def draw_row_line(c, table_y):
+        # Linhas horizontais apenas abaixo de cada item
+        table_width = sum(col_widths)
+        c.line(60, table_y, 60 + table_width, table_y)
 
     col_widths = [180, 50, 30, 30, 30, 30, 60, 80, 90, 80, 30]
+    row_height = 15
+    max_rows_per_page = 20
 
     draw_header(c)
-    
-    table_y = height - 150 
+    table_y = height - 150
     draw_table_header(c, table_y)
+    table_y -= 25
 
-    table_y -= 20 
-  
-    row_height = 15
-    max_rows_per_page = 20 
     rows_on_page = 0
-
     c.setFont("Helvetica", 7)
-    
+
     for row in table_data:
         if rows_on_page >= max_rows_per_page:
             c.showPage()
             draw_header(c)
-            table_y = height - 150 
+            table_y = height - 150
             draw_table_header(c, table_y)
-            table_y -= 20
+            table_y -= 25
             rows_on_page = 0
 
-        x_position = 50
+        # Escrever os dados da tabela
+        x_position = 60
         for i, cell in enumerate(row):
-            c.drawString(x_position, table_y, str(cell))
-            x_position += col_widths[i] + 1
+            c.drawString(x_position + 5, table_y - 10, str(cell))  # Ajuste para centralizar o texto verticalmente
+            x_position += col_widths[i]
+
+        draw_row_line(c, table_y)  # Desenhar linha horizontal abaixo do item
         table_y -= row_height
         rows_on_page += 1
 
     c.save()
-
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
 
 
@@ -112,3 +126,84 @@ def generate_csv(supplier, table_data):
             writer.writerow(row)
     
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
+
+def generate_pdf_rupture(supplier, days_estimate, table_data):
+    supplier = supplier or "Fornecedor_Desconhecido"
+    supplier = ''.join(e for e in supplier if e.isalnum() or e in (' ', '_', '-')).strip()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_path = os.path.join(REPORTS_DIR, f'rupture_risk_{supplier}_{timestamp}.pdf')
+
+    if not os.path.exists(REPORTS_DIR):
+        os.makedirs(REPORTS_DIR)
+
+    c = canvas.Canvas(pdf_path, pagesize=landscape(A4))
+    width, height = landscape(A4)
+
+    def draw_header(c):
+        logo_path = "static/logo-removebg-preview.png"
+        logo_width, logo_height = 40, 40
+        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(105, height - 85, "TS DISTRIBUIDORA")
+        c.drawString(300, height - 70, "Tabela de Risco de Ruptura")
+        c.setFont("Helvetica", 10)
+        info_text = (
+            f"Fornecedor: {supplier}            "
+            f"Previsão para os próximos {days_estimate} dias.          "
+            f"*Esse relatório leva em consideração as vendas diárias nos últimos 90 dias."
+        )
+        c.drawString(60, height - 120, info_text)
+
+    def draw_table_header(c, table_y):
+        c.setFont("Helvetica-Bold", 7)
+        columns = ["Descrição", "Estoque Disponível", "Estoque Mínimo", "Em Trânsito", "Média Diária", "Curva"]
+        x_position = 60
+
+        for i, column in enumerate(columns):
+            c.drawString(x_position + 5, table_y - 10, column)
+            x_position += col_widths[i]
+
+        table_width = sum(col_widths)
+        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
+
+        x_position = 60
+        for width in col_widths:
+            c.line(x_position, table_y, x_position, table_y - 20)
+            x_position += width
+
+    def draw_row_line(c, table_y):
+        table_width = sum(col_widths)
+        c.line(60, table_y, 60 + table_width, table_y)
+
+    col_widths = [200, 100, 100, 100, 100, 80]
+    row_height = 15
+    max_rows_per_page = 20
+
+    draw_header(c)
+    table_y = height - 150
+    draw_table_header(c, table_y)
+    table_y -= 25
+
+    rows_on_page = 0
+    c.setFont("Helvetica", 7)
+
+    for row in table_data:
+        if rows_on_page >= max_rows_per_page:
+            c.showPage()
+            draw_header(c)
+            table_y = height - 150
+            draw_table_header(c, table_y)
+            table_y -= 25
+            rows_on_page = 0
+
+        x_position = 60
+        for i, cell in enumerate(row):
+            c.drawString(x_position + 5, table_y - 10, str(cell))
+            x_position += col_widths[i]
+
+        draw_row_line(c, table_y)
+        table_y -= row_height
+        rows_on_page += 1
+
+    c.save()
+    return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"

@@ -1,6 +1,5 @@
-# routes/reports.py
 from flask import Blueprint, request, jsonify
-from utils.reports_utils import generate_pdf, generate_excel, generate_csv
+from utils.reports_utils import generate_pdf, generate_excel, generate_csv, generate_pdf_rupture
 import threading
 
 report = Blueprint('report', __name__)
@@ -18,13 +17,43 @@ def generate_report():
         replacement_days = data['replacement_days']
         supply_days = data['supply_days']
         table_data = data['table_data']
-        file_format = data.get('file_format', 'pdf')  # Adiciona verificação do formato do arquivo
+        file_format = data.get('file_format', 'pdf')
 
-        # Geração condicional do arquivo solicitado
         if file_format == 'pdf':
             file_path = generate_pdf(supplier, replacement_days, supply_days, table_data)
         elif file_format == 'excel':
             file_path = generate_excel(table_data)
+        elif file_format == 'csv':
+            file_path = generate_csv(supplier, table_data)
+        else:
+            return jsonify({"error": "Formato de arquivo inválido"}), 400
+
+        return jsonify({
+            "message": "Relatório gerado com sucesso",
+            "file_path": file_path
+        })
+    except Exception as e:
+        print(f"Erro ao gerar relatório: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        lock.release()
+
+@report.route('/generate_rupture_report', methods=['POST'])
+def generate_rupture_report():
+    if not lock.acquire(blocking=False):
+        return jsonify({"error": "Um relatório já está sendo gerado"}), 429
+
+    try:
+        data = request.get_json()
+        supplier = data.get('supplier', 'Fornecedor_Desconhecido')
+        days_estimate = data['days_estimate']
+        table_data = data['table_data']
+        file_format = data.get('file_format', 'pdf')
+
+        if file_format == 'pdf':
+            file_path = generate_pdf_rupture(supplier, days_estimate, table_data)
+        elif file_format == 'excel':
+            file_path = generate_excel(supplier, days_estimate, table_data)
         elif file_format == 'csv':
             file_path = generate_csv(supplier, table_data)
         else:

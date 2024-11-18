@@ -1,8 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     const calculateButton = document.getElementById("calculate-button");
+    const generateReportButton = document.getElementById("generate-report-button");
+    const chooseFileSelect = document.getElementById("choose-file");
     const suppliersSelect = document.getElementById("suppliers");
     const replacementDaysInput = document.getElementById("days-estemate");
     const dataTableBody = document.getElementById("data-table");
+    const reportSection = document.getElementById("report-generation-section");
 
     function getSuppliers() {
         fetch(`${CONFIG.API_BASE_URL}/api/suppliers`)
@@ -21,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function populateTable(products) {
         dataTableBody.innerHTML = "";
-        
+
         products.forEach(product => {
             const row = document.createElement("tr");
             row.innerHTML = `
@@ -34,25 +37,18 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
             dataTableBody.appendChild(row);
         });
+
+        // Exibe a seção de geração de relatório
+        reportSection.style.display = "block";
     }
 
     function getRuptureRisk(supplierName, daysEstimate) {
         const url = `${CONFIG.API_BASE_URL}/api/rupture-risk?supplier_name=${supplierName}&days_estimate=${daysEstimate}`;
-    
+
         fetch(url.trim())
             .then(response => {
                 if (!response.ok) {
-                    if (response.status === 404) {
-                        return response.json().then(data => {
-                            if (data.message && data.message === "Nenhum produto encontrado para o fornecedor especificado!") {
-                                alert(`${supplierName} não possui produtos em movimentação no estoque.`);
-                            } else {
-                                alert(`Erro inesperado: ${data.message || "Não foi possível processar a requisição."}`);
-                            }
-                        });
-                    } else {
-                        throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-                    }
+                    throw new Error("Erro na resposta do servidor.");
                 }
                 return response.json();
             })
@@ -61,19 +57,59 @@ document.addEventListener("DOMContentLoaded", function () {
                     alert(`${supplierName} não possui produtos em movimentação no estoque.`);
                 } else if (data && Array.isArray(data)) {
                     populateTable(data);
-                } else {
-                    alert("Erro inesperado ao processar os dados do fornecedor.");
                 }
             })
             .catch(error => {
                 console.error('Erro na requisição:', error);
-                alert(`Entrar em contato com o suporte. Erro ao buscar dados: ${error.message}`);
+                alert(`Erro ao buscar dados: ${error.message}`);
+            });
+    }
+
+    function generateReport() {
+        const supplierName = suppliersSelect.value;
+        const daysEstimate = replacementDaysInput.value;
+        const fileFormat = chooseFileSelect.value;
+
+        if (!supplierName || !daysEstimate || !fileFormat) {
+            alert("Preencha todos os campos antes de gerar o relatório.");
+            return;
+        }
+
+        const tableData = Array.from(dataTableBody.querySelectorAll("tr")).map(row => {
+            return Array.from(row.querySelectorAll("td")).map(cell => cell.textContent.trim());
+        });
+
+        const payload = {
+            supplier_name: supplierName,
+            days_estimate: parseInt(daysEstimate, 10),
+            table_data: tableData,
+            file_format: fileFormat
+        };
+
+        fetch(`${CONFIG.API_BASE_URL}/api/generate_rupture_report`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.file_path) {
+                    window.open(data.file_path, "_blank");
+                } else {
+                    alert("Erro ao gerar o relatório.");
+                }
+            })
+            .catch(error => {
+                console.error("Erro ao gerar relatório:", error);
+                alert("Erro ao gerar relatório.");
             });
     }
 
     calculateButton.addEventListener("click", function () {
         const supplierName = suppliersSelect ? suppliersSelect.value : null;
-        const daysEstimate = replacementDaysInput ? replacementDaysInput.value : null; 
+        const daysEstimate = replacementDaysInput ? replacementDaysInput.value : null;
 
         if (!supplierName || !daysEstimate) {
             alert("Por favor, selecione um fornecedor e insira os dias estimados.");
@@ -83,27 +119,7 @@ document.addEventListener("DOMContentLoaded", function () {
         getRuptureRisk(supplierName, daysEstimate);
     });
 
-    // generateReportButton.addEventListener('click', async () => {
-    //     const suppliers = document.getElementById("suppliers").value;
-    //     const replacementDays = document.getElementById("replacementDays").value;
-    //     const supplyDays = document.getElementById("supplyDays").value;
-    //     const fileFormat = fileFormatSelect.value;
-
-    //     const dataTable = [...document.querySelectorAll("#data-table tr")].map(row => 
-    //         [...row.querySelectorAll("td")].map(cell => cell.innerText)
-    //     );
-
-    //     const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate-report-risk`, {
-    //         method: "POST",
-    //         headers: { "Content-Type": "application/json" },
-    //         body: JSON.stringify({ supplier: suppliers, replacement_days: replacementDays, supply_days: supplyDays, table_data: dataTable, file_format: fileFormat })
-    //     });
-
-    //     const data = await response.json();
-    //     if (data && data.file_path) {
-    //         window.open(data.file_path, "_blank");
-    //     }
-    // });
+    generateReportButton.addEventListener("click", generateReport);
 
     getSuppliers();
 });
