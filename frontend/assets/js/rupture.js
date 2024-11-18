@@ -66,26 +66,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function generateReport() {
-        const supplierName = suppliersSelect.value;
-        const daysEstimate = replacementDaysInput.value;
-        const fileFormat = chooseFileSelect.value;
-
+        const supplierName = suppliersSelect.value; // Nome do fornecedor
+        const daysEstimate = replacementDaysInput.value; // Dias estimados
+        const fileFormat = chooseFileSelect.value; // Formato do arquivo
+    
         if (!supplierName || !daysEstimate || !fileFormat) {
             alert("Preencha todos os campos antes de gerar o relatório.");
             return;
         }
-
+    
         const tableData = Array.from(dataTableBody.querySelectorAll("tr")).map(row => {
             return Array.from(row.querySelectorAll("td")).map(cell => cell.textContent.trim());
         });
-
+    
         const payload = {
-            supplier_name: supplierName,
+            supplier: supplierName,
             days_estimate: parseInt(daysEstimate, 10),
             table_data: tableData,
             file_format: fileFormat
         };
-
+    
         fetch(`${CONFIG.API_BASE_URL}/api/generate_rupture_report`, {
             method: "POST",
             headers: {

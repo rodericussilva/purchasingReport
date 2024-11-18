@@ -46,9 +46,9 @@ def generate_rupture_report():
     try:
         data = request.get_json()
         supplier = data.get('supplier', 'Fornecedor_Desconhecido')
-        days_estimate = data['days_estimate']
-        table_data = data['table_data']
-        file_format = data.get('file_format', 'pdf')
+        days_estimate = data.get('days_estimate')
+        table_data = data.get('table_data')
+        file_format = data.get('file_format', 'pdf') 
 
         if file_format == 'pdf':
             file_path = generate_pdf_rupture(supplier, days_estimate, table_data)

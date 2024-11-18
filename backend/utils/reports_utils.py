@@ -39,18 +39,15 @@ def generate_pdf(supplier, replacement_days, supply_days, table_data):
             c.drawString(x_position + 5, table_y - 10, column)
             x_position += col_widths[i]
 
-        # Desenhar bordas do cabeçalho
         table_width = sum(col_widths)
-        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)  # Retângulo externo do cabeçalho
+        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
 
-        # Desenhar linhas verticais no cabeçalho
         x_position = 60
         for width in col_widths:
-            c.line(x_position, table_y, x_position, table_y - 20)  # Linhas verticais
+            c.line(x_position, table_y, x_position, table_y - 20)
             x_position += width
 
     def draw_row_line(c, table_y):
-        # Linhas horizontais apenas abaixo de cada item
         table_width = sum(col_widths)
         c.line(60, table_y, 60 + table_width, table_y)
 
@@ -75,13 +72,12 @@ def generate_pdf(supplier, replacement_days, supply_days, table_data):
             table_y -= 25
             rows_on_page = 0
 
-        # Escrever os dados da tabela
         x_position = 60
         for i, cell in enumerate(row):
-            c.drawString(x_position + 5, table_y - 10, str(cell))  # Ajuste para centralizar o texto verticalmente
+            c.drawString(x_position + 5, table_y - 10, str(cell))
             x_position += col_widths[i]
 
-        draw_row_line(c, table_y)  # Desenhar linha horizontal abaixo do item
+        draw_row_line(c, table_y)
         table_y -= row_height
         rows_on_page += 1
 
@@ -142,38 +138,38 @@ def generate_pdf_rupture(supplier, days_estimate, table_data):
     def draw_header(c):
         logo_path = "static/logo-removebg-preview.png"
         logo_width, logo_height = 40, 40
-        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
+        c.drawImage(logo_path, 70, height - 100, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(105, height - 85, "TS DISTRIBUIDORA")
+        c.drawString(115, height - 85, "TS DISTRIBUIDORA")
         c.drawString(300, height - 70, "Tabela de Risco de Ruptura")
         c.setFont("Helvetica", 10)
         info_text = (
             f"Fornecedor: {supplier}            "
-            f"Previsão para os próximos {days_estimate} dias.          "
+            f"Previsão para os próximos {days_estimate} dias.                   "
             f"*Esse relatório leva em consideração as vendas diárias nos últimos 90 dias."
         )
-        c.drawString(60, height - 120, info_text)
+        c.drawString(70, height - 120, info_text)
 
     def draw_table_header(c, table_y):
         c.setFont("Helvetica-Bold", 7)
         columns = ["Descrição", "Estoque Disponível", "Estoque Mínimo", "Em Trânsito", "Média Diária", "Curva"]
-        x_position = 60
+        x_position = 70
 
         for i, column in enumerate(columns):
             c.drawString(x_position + 5, table_y - 10, column)
             x_position += col_widths[i]
 
         table_width = sum(col_widths)
-        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
+        c.rect(70, table_y - 20, table_width, 20, stroke=1, fill=0)
 
-        x_position = 60
+        x_position = 70
         for width in col_widths:
             c.line(x_position, table_y, x_position, table_y - 20)
             x_position += width
 
     def draw_row_line(c, table_y):
         table_width = sum(col_widths)
-        c.line(60, table_y, 60 + table_width, table_y)
+        c.line(70, table_y, 70 + table_width, table_y)
 
     col_widths = [200, 100, 100, 100, 100, 80]
     row_height = 15
@@ -196,7 +192,7 @@ def generate_pdf_rupture(supplier, days_estimate, table_data):
             table_y -= 25
             rows_on_page = 0
 
-        x_position = 60
+        x_position = 70
         for i, cell in enumerate(row):
             c.drawString(x_position + 5, table_y - 10, str(cell))
             x_position += col_widths[i]
