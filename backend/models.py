@@ -300,6 +300,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             pr.Sta_AbcValFatFab,
             ROUND(pr.Prc_Venda, 2) AS Prc_Venda,
             pr.Qtd_Dispon,
+            det.Qtd_SldCalPra,
             pr.Qtd_Fisico,
             pr.Qtd_Transi,
             pr.Qtd_EstMin,
@@ -348,6 +349,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
         JOIN
 	        FABRI f ON p.Cod_Fabricante = f.Codigo
         JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
+        JOIN V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
         WHERE f.Fantasia = ?
         AND f.Fantasia NOT IN (
             '3M', 
@@ -629,6 +631,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             pr.Sta_AbcValFatFab,
             pr.Prc_Venda,
             pr.Qtd_Dispon,
+            det.Qtd_SldCalPra,
             pr.Qtd_Fisico,
             pr.Qtd_Transi,
             pr.Qtd_EstMin,
@@ -648,7 +651,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
         cobertura = int(formatted_avg / media_faturamento_diario)
 
         dias_suprimento_total = replacement_days + supply_days
-        sugestao_compra = int((media_faturamento_diario * dias_suprimento_total) - row.Qtd_Dispon)
+        sugestao_compra = int((media_faturamento_diario * dias_suprimento_total) - row.Qtd_SldCalPra)
 
         products.append({
             'descricao': row.Descricao,
@@ -658,7 +661,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             'unidades_faturadas_mes3': row.Qtd_FatMes3,
             'media_faturada': formatted_avg,
             'estoque_minimo': row.Qtd_EstMin,
-            'estoque_disponivel': row.Qtd_Dispon,
+            'estoque_disponivel': row.Qtd_SldCalPra,
             'sugestao_compra': sugestao_compra,
             'valor_venda': formatted_price,
             'curva': row.Sta_AbcUniVenFab,
@@ -690,7 +693,7 @@ def fetch_total_suggestions():
                 ROUND((SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
-			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0, 2) AS media_faturada,
+			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0, 0) AS media_faturada,
                 
                 pr.Qtd_Dispon,
 
@@ -1001,6 +1004,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         pr.Sta_AbcUniVenFab,
         pr.Sta_AbcValFatFab,
         pr.Qtd_Dispon,
+        det.Qtd_SldCalPra,
         pr.Qtd_Fisico,
         pr.Qtd_Transi,
         pr.Qtd_EstMin,
@@ -1026,6 +1030,8 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         FABRI f ON p.Cod_Fabricante = f.Codigo
     JOIN 
         PRXES pr ON pr.Cod_Produt = p.Codigo
+    JOIN 
+    	V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
     WHERE
         f.Fantasia = ?
         AND f.Fantasia NOT IN (
@@ -1307,6 +1313,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         pr.Sta_AbcUniVenFab, 
         pr.Sta_AbcValFatFab, 
         pr.Qtd_Dispon, 
+        det.Qtd_SldCalPra,
         pr.Qtd_Fisico, 
         pr.Qtd_Transi, 
         pr.Qtd_EstMin, 
@@ -1323,7 +1330,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
     
     for row in result:
         descricao = row.Descricao
-        estoque_disponivel = row.Qtd_Dispon
+        estoque_disponivel = row.Qtd_SldCalPra
         estoque_fisico = row.Qtd_Fisico
         estoque_transito = row.Qtd_Transi
         media_diaria_venda = row.media_diaria_venda
@@ -1359,6 +1366,7 @@ def fetch_total_rupture_risk(days_estimate):
         SELECT
             p.Codigo,
             pr.Qtd_Dispon,
+            det.Qtd_SldCalPra,
             pr.Qtd_Transi,
             pr.Qtd_EstMin,
             ROUND(
@@ -1374,9 +1382,12 @@ def fetch_total_rupture_risk(days_estimate):
             PRODU p ON v.IDPRODUTO = p.Codigo
         JOIN 
             PRXES pr ON pr.Cod_Produt = p.Codigo
+        JOIN 
+        	V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
         GROUP BY 
             p.Codigo,
             pr.Qtd_Dispon,
+            det.Qtd_SldCalPra,
             pr.Qtd_Transi,
             pr.Qtd_EstMin;
     """
@@ -1387,7 +1398,7 @@ def fetch_total_rupture_risk(days_estimate):
     total_risk_items = 0
 
     for row in result:
-        total_stock = row.Qtd_Dispon + row.Qtd_Transi 
+        total_stock = row.Qtd_SldCalPra + row.Qtd_Transi 
         predicted_sales = row.Media_Diaria_Trimestre * days_estimate
         rupture_risk = (total_stock - predicted_sales) - total_stock if total_stock > 0 else -1
 
