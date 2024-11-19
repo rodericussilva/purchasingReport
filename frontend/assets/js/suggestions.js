@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${product.unidades_faturadas_mes0}</td>
                         <td>${product.media_faturada}</td>
                         <td>${product.estoque_disponivel}</td>
+                        <td>${product.estoque_minimo}</td>
                         <td>${product.sugestao_compra}</td>
                         <td>${product.valor_venda}</td>
                         <td>${product.curva}</td>
