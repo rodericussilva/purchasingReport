@@ -1446,18 +1446,15 @@ def fetch_items_within_1_year():
         dat_prx_vct_lot = row.Dat_PrxVctLot
         dat_vct_lot_mais_recente = row.Dat_VctLot_Mais_Recente
 
-        # Determina a data de vencimento final
         if dat_prx_vct_lot:
             data_vencimento = dat_prx_vct_lot.date() if isinstance(dat_prx_vct_lot, datetime) else dat_prx_vct_lot
         elif dat_vct_lot_mais_recente:
             data_vencimento = dat_vct_lot_mais_recente.date() if isinstance(dat_vct_lot_mais_recente, datetime) else dat_vct_lot_mais_recente
         else:
-            continue  # Ignora produtos sem datas válidas
+            continue
 
-        # Calcula os dias para vencimento
         dias_para_vencimento = (data_vencimento - datetime.now().date()).days
 
-        # Conta produtos com vencimento dentro de 1 ano
         if 0 <= dias_para_vencimento <= 365:
             total_within_1_year += 1
 
@@ -1465,3 +1462,71 @@ def fetch_items_within_1_year():
     connection.close()
 
     return total_within_1_year
+
+def fetch_items_below_1_year(supplier_name):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """
+        SELECT 
+            p.Codigo,
+            p.Descricao,
+            pr.Qtd_Dispon,
+            pr.Sta_AbcUniVenFab,
+            pr.Dat_PrxVctLot,
+            MAX(ba.Dat_VctLot) AS Dat_VctLot_Mais_Recente
+        FROM 
+            PRODU p
+        JOIN 
+            FABRI f ON p.Cod_Fabricante = f.Codigo
+        JOIN 
+            PRXES pr ON pr.Cod_Produt = p.Codigo
+        LEFT JOIN 
+            V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
+        LEFT JOIN 
+            BALIT ba ON p.Codigo = ba.Cod_Produt
+        WHERE 
+            f.Fantasia = ?
+        GROUP BY 
+            p.Codigo,
+            p.Descricao,
+            pr.Qtd_Dispon,
+            pr.Sta_AbcUniVenFab,
+            pr.Dat_PrxVctLot;
+    """
+
+    cursor.execute(query, (supplier_name,))
+    result = cursor.fetchall()
+
+    items_below_1_year = []
+
+    for row in result:
+        codigo = row.Codigo
+        descricao = row.Descricao
+        qtd_disponivel = row.Qtd_Dispon
+        curva = row.Sta_AbcUniVenFab
+        dat_prx_vct_lot = row.Dat_PrxVctLot
+        dat_vct_lot_mais_recente = row.Dat_VctLot_Mais_Recente
+
+        if dat_prx_vct_lot:
+            data_vencimento = dat_prx_vct_lot.date() if isinstance(dat_prx_vct_lot, datetime) else dat_prx_vct_lot
+        elif dat_vct_lot_mais_recente:
+            data_vencimento = dat_vct_lot_mais_recente.date() if isinstance(dat_vct_lot_mais_recente, datetime) else dat_vct_lot_mais_recente
+        else:
+            continue
+
+        dias_para_vencimento = (data_vencimento - datetime.now().date()).days
+
+        if 0 <= dias_para_vencimento <= 365:
+            items_below_1_year.append({
+                "codigo": codigo,
+                "descricao": descricao,
+                "quantidade_estoque": qtd_disponivel,
+                "data_vencimento": data_vencimento.strftime("%Y-%m-%d"),
+                "curva": curva
+            })
+
+    cursor.close()
+    connection.close()
+
+    return items_below_1_year

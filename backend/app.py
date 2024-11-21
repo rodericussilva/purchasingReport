@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -100,6 +100,22 @@ def get_items_within_1_year():
         return jsonify({"total_within_1_year": total_within_1_year}), 200
     except Exception as e:
         print(f"Erro ao buscar itens dentro de 1 ano: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/items-below-1-year', methods=['GET'])
+def get_items_below_1_year():
+    try:
+        supplier_name = request.args.get('supplier_name')
+        if not supplier_name:
+            return jsonify({"error": "O fornecedor não foi especificado!"}), 400
+
+        items = fetch_items_below_1_year(supplier_name)
+        if not items:
+            return jsonify({"message": "Nenhum item abaixo de 1 ano para vencimento encontrado!"}), 404
+
+        return jsonify(items), 200
+    except Exception as e:
+        print(f"Erro ao buscar itens abaixo de 1 ano para vencimento: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
