@@ -1492,7 +1492,8 @@ def fetch_items_below_1_year(supplier_name):
             p.Descricao,
             pr.Qtd_Dispon,
             pr.Sta_AbcUniVenFab,
-            pr.Dat_PrxVctLot;
+            pr.Dat_PrxVctLot
+        ORDER BY p.Descricao ASC;
     """
 
     cursor.execute(query, (supplier_name,))
