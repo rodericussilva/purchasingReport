@@ -31,9 +31,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const url = `${CONFIG.API_BASE_URL}/api/items-below-1-year?supplier_name=${encodeURIComponent(supplierName)}`;
         
         fetch(url)
-            .then(response => {
+            .then(async response => {
                 if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor.');
+                    const errorData = await response.json();
+                    const errorMessage = errorData.error || 'Erro desconhecido ao carregar itens.';
+                    throw new Error(errorMessage);
                 }
                 return response.json();
             })
@@ -45,8 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                console.error('Erro ao carregar itens abaixo de 1 ano:', error);
-                alert('Erro ao carregar dados. Verifique o console para mais detalhes.');
+                console.error('Erro ao carregar itens abaixo de 1 ano:', error.message);
+                alert(`Erro ao carregar itens: ${error.message}`);
             });
     }
 
