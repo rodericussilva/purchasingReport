@@ -1,4 +1,5 @@
 from database import get_db_connection
+from datetime import datetime
 
 def fetch_suppliers():
     connection = get_db_connection()
@@ -1411,3 +1412,56 @@ def fetch_total_rupture_risk(days_estimate):
     connection.close()
 
     return total_risk_items
+
+def fetch_items_within_1_year():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """
+        SELECT 
+            p.Codigo,
+            det.Qtd_SldCalPra,
+            pr.Dat_PrxVctLot,
+            MAX(ba.Dat_VctLot) AS Dat_VctLot_Mais_Recente
+        FROM 
+            PRODU p
+        JOIN 
+            PRXES pr ON pr.Cod_Produt = p.Codigo
+        JOIN 
+            V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
+        LEFT JOIN 
+            BALIT ba ON p.Codigo = ba.Cod_Produt
+        GROUP BY 
+            p.Codigo, 
+            det.Qtd_SldCalPra, 
+            pr.Dat_PrxVctLot;
+    """
+
+    cursor.execute(query)
+    result = cursor.fetchall()
+
+    total_within_1_year = 0
+
+    for row in result:
+        dat_prx_vct_lot = row.Dat_PrxVctLot
+        dat_vct_lot_mais_recente = row.Dat_VctLot_Mais_Recente
+
+        # Determina a data de vencimento final
+        if dat_prx_vct_lot:
+            data_vencimento = dat_prx_vct_lot.date() if isinstance(dat_prx_vct_lot, datetime) else dat_prx_vct_lot
+        elif dat_vct_lot_mais_recente:
+            data_vencimento = dat_vct_lot_mais_recente.date() if isinstance(dat_vct_lot_mais_recente, datetime) else dat_vct_lot_mais_recente
+        else:
+            continue  # Ignora produtos sem datas válidas
+
+        # Calcula os dias para vencimento
+        dias_para_vencimento = (data_vencimento - datetime.now().date()).days
+
+        # Conta produtos com vencimento dentro de 1 ano
+        if 0 <= dias_para_vencimento <= 365:
+            total_within_1_year += 1
+
+    cursor.close()
+    connection.close()
+
+    return total_within_1_year

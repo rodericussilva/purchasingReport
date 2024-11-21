@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -89,9 +89,18 @@ def rupture_risk():
     
 @app.route('/api/rupture-risk-count', methods=['GET'])
 def get_rupture_risk_count():
-    days_estimate = int(request.args.get('days_estimate', 30))  # Valor padrão de 30 dias
+    days_estimate = int(request.args.get('days_estimate', 30))  # default value of 30 days
     total_risk_items = fetch_total_rupture_risk(days_estimate)
     return jsonify({"total_risk_items": total_risk_items})
+
+@app.route('/api/maturity-items-count', methods=['GET'])
+def get_items_within_1_year():
+    try:
+        total_within_1_year = fetch_items_within_1_year()
+        return jsonify({"total_within_1_year": total_within_1_year}), 200
+    except Exception as e:
+        print(f"Erro ao buscar itens dentro de 1 ano: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_HOST', '127.0.0.1')

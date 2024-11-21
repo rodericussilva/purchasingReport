@@ -61,13 +61,38 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    function loadItemsWithin1Year() {
+        const progressElement = document.getElementById("total-maturity-items");
+        const loadingSpinnerMaturity = document.getElementById("loading-spinner-maturity");
+
+        loadingSpinnerMaturity.style.display = "inline-block";
+
+        fetch(`${CONFIG.API_BASE_URL}/api/maturity-items-count`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.total_within_1_year !== undefined) {
+                    const total = data.total_within_1_year;
+                    loadingSpinnerMaturity.style.display = "none";
+                    animateProgress(0, total, 2000, "total-maturity-items");
+                } else {
+                    progressElement.innerText = "0";
+                    console.error("Nenhum valor de itens abaixo de 1 ano retornado.");
+                }
+            })
+            .catch(error => {
+                console.error("Erro ao carregar total de itens abaixo de 1 ano:", error);
+                loadingSpinnerMaturity.style.display = "none";
+                progressElement.innerText = "Erro ao carregar dados";
+            });
+    }
+
     function updateRuptureDays(days) {
         const selectedDaysSpan = document.getElementById("selected-days");
         selectedDaysSpan.textContent = `| ${days} dias`;
         loadRuptureRisk(days);
     }
 
-    // Configura o filtro de dias com valor padrão de 30 dias ao carregar a página
+    // sets the days filter to a default value of 30 days when loading the page
     const daysFilter = document.getElementById("days-filter");
     daysFilter.addEventListener("click", (event) => {
         const target = event.target;
@@ -78,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Carrega as contagens iniciais com o valor padrão de 30 dias
     loadTotalSuggestions();
-    updateRuptureDays(30);
+    updateRuptureDays(30); // default value of 30 days
+    loadItemsWithin1Year();
 });
