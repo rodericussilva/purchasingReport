@@ -135,15 +135,18 @@
               <div class="card info-card superior-card">
 
                 <div class="card-body">
-                  <h5 class="card-title">Itens superior a 120 dias <span></span></h5>
+                  <h5 class="card-title">Itens parados a mais de 120 dias <span></span></h5>
                   <a href="#"> <!--link-->
                     <div class="d-flex align-items-center">
                       <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
                         <i class="bi bi-arrow-up"></i>
                       </div>
                       <div class="ps-3">
-                        <h6>1244 - [Retornará soma] </h6> <!-- Retornará soma -->
+                        <h6 id="total-stopped-120-days"></h6> <!-- Retornará soma -->
                         <!-- <span class="text-danger small pt-1 fw-bold">12%</span> <span class="text-muted small pt-2 ps-1">decrease</span> -->
+                        <div id="loading-spinner-120" class="spinner-border text-primary" style="display: none;" role="status">
+                          <span id="loading-spinner"></span>
+                        </div>
                       </div>
                     </div>
                   </a>
@@ -168,7 +171,9 @@
                       <div class="ps-3">
                         <h6 id="total-maturity-items"></h6> <!-- Retornar soma-->
                         <!-- <span class="text-danger small pt-1 fw-bold">12%</span> <span class="text-muted small pt-2 ps-1">decrease</span> -->
-                        <span id="loading-spinner-maturity" class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;"></span>
+                        <div id="loading-spinner-maturity" class="spinner-border text-primary" style="display: none;" role="status">
+                          <span id="loading-spinner"></span>
+                        </div>
                       </div>
                     </div>
                   </a>

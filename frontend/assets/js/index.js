@@ -61,6 +61,31 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    function loadItemsStopped120Days() {
+        const progressElement = document.getElementById("total-stopped-120-days");
+        const loadingSpinnerStopped120 = document.getElementById("loading-spinner-120");
+
+        loadingSpinnerStopped120.style.display = "inline-block";
+
+        fetch(`${CONFIG.API_BASE_URL}/api/items-stopped-120-days`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.total_stopped_120_days !== undefined) {
+                    const total = data.total_stopped_120_days;
+                    loadingSpinnerStopped120.style.display = "none";
+                    animateProgress(0, total, 2000, "total-stopped-120-days");
+                } else {
+                    progressElement.innerText = "0";
+                    console.error("Nenhum valor de itens parados a mais de 120 dias retornado.");
+                }
+            })
+            .catch(error => {
+                console.error("Erro ao carregar total de itens parados a mais de 120 dias:", error);
+                loadingSpinnerStopped120.style.display = "none";
+                progressElement.innerText = "Erro ao carregar dados";
+            });
+    }
+
     function loadItemsWithin1Year() {
         const progressElement = document.getElementById("total-maturity-items");
         const loadingSpinnerMaturity = document.getElementById("loading-spinner-maturity");
@@ -105,5 +130,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     loadTotalSuggestions();
     updateRuptureDays(30); // default value of 30 days
+    loadItemsStopped120Days();
     loadItemsWithin1Year();
 });
