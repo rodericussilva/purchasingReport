@@ -1531,3 +1531,35 @@ def fetch_items_below_1_year(supplier_name):
     connection.close()
 
     return items_below_1_year
+
+def fetch_items_stopped_120_days():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """
+        SELECT 
+            p.Codigo,
+            p.Descricao,
+            f.Fantasia,
+            MAX(v.DATA) AS ULTIMA_VENDA
+        FROM 
+            fVENDAS v
+        JOIN 
+            PRODU p ON v.IDPRODUTO = p.Codigo
+        JOIN 
+            FABRI f ON p.Cod_Fabricante = f.Codigo
+        GROUP BY 
+            p.Codigo, p.Descricao, f.Fantasia
+        HAVING 
+            MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -120, GETDATE());
+    """
+
+    cursor.execute(query)
+    result = cursor.fetchall()
+
+    total_stopped_120_days = len(result)
+
+    cursor.close()
+    connection.close()
+
+    return total_stopped_120_days
