@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert(`${supplierName} não possui itens abaixo de 1 ano para vencimento.`);
                 } else {
                     populateTable(data);
+                    document.getElementById('report-generation-section').style.display = 'block';
                 }
             })
             .catch(error => {
@@ -120,6 +121,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         getItemsBelow1Year(supplierName);
     });
+
+    generateReportButton.addEventListener('click', generateReport);
 
     getSuppliers();
 });

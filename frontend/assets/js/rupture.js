@@ -66,9 +66,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function generateReport() {
-        const supplierName = suppliersSelect.value; // Nome do fornecedor
-        const daysEstimate = replacementDaysInput.value; // Dias estimados
-        const fileFormat = chooseFileSelect.value; // Formato do arquivo
+        const supplierName = suppliersSelect.value; 
+        const daysEstimate = replacementDaysInput.value;
+        const fileFormat = chooseFileSelect.value;
     
         if (!supplierName || !daysEstimate || !fileFormat) {
             alert("Preencha todos os campos antes de gerar o relatório.");
