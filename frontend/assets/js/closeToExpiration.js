@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const suppliersSelect = document.getElementById('suppliers');
     const calculateButton = document.getElementById('calculate-button');
     const dataTableBody = document.getElementById('data-table');
+    const generateReportButton = document.getElementById('generate-report-button');
+    const chooseFileSelect = document.getElementById('choose-file');
 
     function formatDateToBrazilian(dateString) {
         if (!dateString) return '';
@@ -66,6 +68,46 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             dataTableBody.appendChild(row);
         });
+    }
+
+    function generateReport() {
+        const supplierName = suppliersSelect.value;
+        const fileFormat = chooseFileSelect.value;
+
+        if (!supplierName || !fileFormat) {
+            alert("Preencha todos os campos antes de gerar o relatório.");
+            return;
+        }
+
+        const tableData = Array.from(dataTableBody.querySelectorAll('tr')).map(row => {
+            return Array.from(row.querySelectorAll('td')).map(cell => cell.textContent.trim());
+        });
+
+        const payload = {
+            supplier_name: supplierName,
+            table_data: tableData,
+            file_format: fileFormat
+        };
+
+        fetch(`${CONFIG.API_BASE_URL}/api/generate_expiration_report`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.file_path) {
+                    window.open(data.file_path, '_blank');
+                } else {
+                    alert('Erro ao gerar o relatório.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao gerar relatório:', error);
+                alert('Erro ao gerar relatório. Verifique o console para mais detalhes.');
+            });
     }
 
     calculateButton.addEventListener('click', function () {
