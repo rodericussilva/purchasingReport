@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const suppliersSelect = document.getElementById('suppliers');
     const calculateButton = document.getElementById('calculate-button');
     const dataTableBody = document.getElementById('data-table');
+    const reportSection = document.getElementById('report-generation-section');
+    const generateReportButton = document.getElementById('generate-report-button');
+    const chooseFileSelect = document.getElementById('choose-file');
 
     function getSuppliers() {
         fetch(`${CONFIG.API_BASE_URL}/api/suppliers`)
@@ -33,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert(`${supplierName} não possui itens parados há mais de 120 dias.`);
                 } else {
                     populateTable(data);
+                    reportSection.style.display = 'block';
                 }
             })
             .catch(error => {
@@ -56,6 +60,46 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function generateReport() {
+        const supplierName = suppliersSelect.value;
+        const fileFormat = chooseFileSelect.value;
+
+        if (!supplierName || !fileFormat) {
+            alert('Preencha todos os campos antes de gerar o relatório.');
+            return;
+        }
+
+        const tableData = Array.from(dataTableBody.querySelectorAll('tr')).map(row => {
+            return Array.from(row.querySelectorAll('td')).map(cell => cell.textContent.trim());
+        });
+
+        const payload = {
+            supplier_name: supplierName,
+            table_data: tableData,
+            file_format: fileFormat
+        };
+
+        fetch(`${CONFIG.API_BASE_URL}/api/generate-stagnant-report`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.file_path) {
+                    window.open(data.file_path, '_blank');
+                } else {
+                    alert('Erro ao gerar o relatório.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao gerar relatório:', error);
+                alert('Erro ao gerar relatório. Verifique o console para mais detalhes.');
+            });
+    }
+
     calculateButton.addEventListener('click', function () {
         const supplierName = suppliersSelect.value;
 
@@ -66,6 +110,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         getStagnantItems(supplierName);
     });
+
+    generateReportButton.addEventListener('click', generateReport);
 
     getSuppliers();
 });
