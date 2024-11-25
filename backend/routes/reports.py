@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from utils.reports_utils import generate_pdf, generate_excel, generate_csv, generate_pdf_rupture, generate_pdf_expiration
+from utils.reports_utils import generate_pdf, generate_excel, generate_csv, generate_pdf_rupture, generate_pdf_expiration, generate_pdf_stagnant
 import threading
 
 report = Blueprint('report', __name__)
@@ -93,3 +93,36 @@ def generate_expiration_report():
     except Exception as e:
         print(f"Erro ao gerar relatório: {e}")
         return jsonify({"error": str(e)}), 500
+    
+@report.route('/generate-stagnant-report', methods=['POST'])
+def generate_stagnant_report():
+    if not lock.acquire(blocking=False):
+        return jsonify({"error": "Um relatório já está sendo gerado"}), 429
+
+    try:
+        data = request.get_json()
+        supplier = data.get('supplier_name', 'Fornecedor_Desconhecido')
+        table_data = data.get('table_data', [])
+        file_format = data.get('file_format', 'pdf')
+
+        if not table_data:
+            return jsonify({"error": "Nenhum dado encontrado para geração do relatório."}), 400
+
+        if file_format == 'pdf':
+            file_path = generate_pdf_stagnant(supplier, table_data)
+        elif file_format == 'excel':
+            file_path = generate_excel(supplier, table_data)
+        elif file_format == 'csv':
+            file_path = generate_csv(supplier, table_data)
+        else:
+            return jsonify({"error": "Formato de arquivo inválido"}), 400
+
+        return jsonify({
+            "message": "Relatório gerado com sucesso.",
+            "file_path": file_path
+        })
+    except Exception as e:
+        print(f"Erro ao gerar relatório: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        lock.release()

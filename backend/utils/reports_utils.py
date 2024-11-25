@@ -314,3 +314,78 @@ def generate_csv(supplier, table_data):
             writer.writerow(row)
 
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
+
+def generate_pdf_stagnant(supplier, table_data):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    pdf_path = os.path.join(REPORTS_DIR, f'stagnant_items_{supplier}_{timestamp}.pdf')
+
+    if not os.path.exists(REPORTS_DIR):
+        os.makedirs(REPORTS_DIR)
+
+    c = canvas.Canvas(pdf_path, pagesize=landscape(A4))
+    width, height = landscape(A4)
+
+    def draw_header(c):
+        logo_path = "static/logo-removebg-preview.png"
+        logo_width, logo_height = 40, 40
+        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(105, height - 85, "TS DISTRIBUIDORA")
+        c.drawString(300, height - 70, "Itens Parados a Mais de 120 Dias")
+        c.setFont("Helvetica", 10)
+        info_text = f"Fornecedor: {supplier}                                   Relatório gerado em {datetime.now().strftime('%d/%m/%Y')}"
+        c.drawString(60, height - 120, info_text)
+
+    def draw_table_header(c, table_y):
+        c.setFont("Helvetica-Bold", 8)
+        columns = ["Descrição", "Quantidade em Estoque", "Data da Última Venda", "Curva"]
+        x_position = 60
+
+        for i, column in enumerate(columns):
+            c.drawString(x_position + 5, table_y - 10, column)
+            x_position += col_widths[i]
+
+        table_width = sum(col_widths)
+        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
+
+        x_position = 60
+        for width in col_widths:
+            c.line(x_position, table_y, x_position, table_y - 20)
+            x_position += width
+
+    def draw_row_line(c, table_y):
+        table_width = sum(col_widths)
+        c.line(60, table_y, 60 + table_width, table_y)
+
+    col_widths = [200, 100, 150, 100]
+    row_height = 20
+    max_rows_per_page = 20
+
+    draw_header(c)
+    table_y = height - 160
+    draw_table_header(c, table_y)
+    table_y -= 25
+
+    rows_on_page = 0
+    c.setFont("Helvetica", 8)
+
+    for row in table_data:
+        if rows_on_page >= max_rows_per_page:
+            c.showPage()
+            draw_header(c)
+            table_y = height - 160
+            draw_table_header(c, table_y)
+            table_y -= 25
+            rows_on_page = 0
+
+        x_position = 60
+        for i, cell in enumerate(row):
+            c.drawString(x_position + 5, table_y - 10, str(cell))
+            x_position += col_widths[i]
+
+        draw_row_line(c, table_y)
+        table_y -= row_height
+        rows_on_page += 1
+
+    c.save()
+    return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
