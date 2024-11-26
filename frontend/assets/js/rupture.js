@@ -38,7 +38,6 @@ document.addEventListener("DOMContentLoaded", function () {
             dataTableBody.appendChild(row);
         });
 
-        // Exibe a seção de geração de relatório
         reportSection.style.display = "block";
     }
 
@@ -46,16 +45,11 @@ document.addEventListener("DOMContentLoaded", function () {
         const url = `${CONFIG.API_BASE_URL}/api/rupture-risk?supplier_name=${supplierName}&days_estimate=${daysEstimate}`;
 
         fetch(url.trim())
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Erro na resposta do servidor.");
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                if (Array.isArray(data) && data.length === 0) {
-                    alert(`${supplierName} não possui produtos em movimentação no estoque.`);
-                } else if (data && Array.isArray(data)) {
+                if (data.length === 0) {
+                    alert(`${supplierName} não possui produtos com risco de ruptura.`);
+                } else {
                     populateTable(data);
                 }
             })
@@ -108,8 +102,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     calculateButton.addEventListener("click", function () {
-        const supplierName = suppliersSelect ? suppliersSelect.value : null;
-        const daysEstimate = replacementDaysInput ? replacementDaysInput.value : null;
+        const supplierName = suppliersSelect.value;
+        const daysEstimate = replacementDaysInput.value;
 
         if (!supplierName || !daysEstimate) {
             alert("Por favor, selecione um fornecedor e insira os dias estimados.");

@@ -17,7 +17,6 @@ def fetch_suppliers():
             'C B DIAS ME', 
             'C & M FARDAMENTOS', 
             'CARMEHIL',
-		    'ARTE NATIVA',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
 		    'AGIS',
@@ -362,7 +361,6 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             'C B DIAS ME', 
             'C & M FARDAMENTOS', 
             'CARMEHIL',
-		    'ARTE NATIVA',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
 		    'AGIS',
@@ -720,7 +718,6 @@ def fetch_total_suggestions():
             'C B DIAS ME', 
             'C & M FARDAMENTOS', 
             'CARMEHIL',
-		    'ARTE NATIVA',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
 		    'AGIS',
@@ -1024,7 +1021,7 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
                     SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
                     SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
                 ) / 90.0, 2
-            ) AS media_diaria_venda  -- Média diária de vendas (último trimestre)
+            ) AS media_diaria_venda  -- Média diária de vendas
     FROM 
         fVENDAS v
     JOIN 
@@ -1047,7 +1044,6 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
             'C B DIAS ME', 
             'C & M FARDAMENTOS', 
             'CARMEHIL',
-		    'ARTE NATIVA',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
 		    'AGIS',
@@ -1344,17 +1340,18 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         previsao_vendas = media_diaria_venda * days_estimate
         risco_ruptura = total_estoque - previsao_vendas
         
-        products.append({
-            'descricao': descricao,
-            'estoque_fisico': estoque_fisico,
-            'estoque_disponivel': estoque_disponivel,
-            'estoque_transito': estoque_transito,
-            'estoque_minimo': estoque_minimo,
-            'curva': curva,
-            'media_diaria_venda': media_diaria_venda,
-            'previsao_vendas': previsao_vendas,
-            'risco_ruptura': risco_ruptura
-        })
+        if risco_ruptura < 0:
+            products.append({
+                'descricao': descricao,
+                'estoque_fisico': estoque_fisico,
+                'estoque_disponivel': estoque_disponivel,
+                'estoque_transito': estoque_transito,
+                'estoque_minimo': estoque_minimo,
+                'curva': curva,
+                'media_diaria_venda': media_diaria_venda,
+                'previsao_vendas': previsao_vendas,
+                'risco_ruptura': risco_ruptura
+            })
     
     cursor.close()
     connection.close()
@@ -1401,9 +1398,9 @@ def fetch_total_rupture_risk(days_estimate):
     total_risk_items = 0
 
     for row in result:
-        total_stock = row.Qtd_SldCalPra + row.Qtd_Transi 
+        total_stock = row.Qtd_SldCalPra + row.Qtd_Transi
         predicted_sales = row.Media_Diaria_Trimestre * days_estimate
-        rupture_risk = (total_stock - predicted_sales) - total_stock if total_stock > 0 else -1
+        rupture_risk = total_stock - predicted_sales
 
         if rupture_risk < 0:
             total_risk_items += 1
@@ -1558,7 +1555,6 @@ def fetch_total_items_stopped_120_days():
             'C B DIAS ME', 
             'C & M FARDAMENTOS', 
             'CARMEHIL',
-		    'ARTE NATIVA',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
 		    'AGIS',
