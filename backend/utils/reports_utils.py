@@ -315,7 +315,7 @@ def generate_csv(supplier, table_data):
 
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
 
-def generate_pdf_stagnant(supplier, table_data):
+def generate_pdf_stagnant(supplier, table_data, days):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     pdf_path = os.path.join(REPORTS_DIR, f'stagnant_items_{supplier}_{timestamp}.pdf')
 
@@ -331,7 +331,7 @@ def generate_pdf_stagnant(supplier, table_data):
         c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(105, height - 85, "TS DISTRIBUIDORA")
-        c.drawString(300, height - 70, "Itens Parados a Mais de 120 Dias")
+        c.drawString(300, height - 70, f"Itens Parados a Mais de {days} Dias")  # Adicionar o número de dias
         c.setFont("Helvetica", 10)
         info_text = f"Fornecedor: {supplier}                                   Relatório gerado em {datetime.now().strftime('%d/%m/%Y')}"
         c.drawString(60, height - 120, info_text)

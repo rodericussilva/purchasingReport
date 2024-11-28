@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Erro ao carregar itens parados:', error);
-                alert('Erro ao carregar dados. Verifique o console para mais detalhes.');
+                alert('Erro ao carregar dados. Contate o suporte.');
             });
     }
 
@@ -64,22 +64,24 @@ document.addEventListener('DOMContentLoaded', function () {
     function generateReport() {
         const supplierName = suppliersSelect.value;
         const fileFormat = chooseFileSelect.value;
-
-        if (!supplierName || !fileFormat) {
+        const days = daysSelect.value;
+    
+        if (!supplierName || !fileFormat || !days) {
             alert('Preencha todos os campos antes de gerar o relatório.');
             return;
         }
-
+    
         const tableData = Array.from(dataTableBody.querySelectorAll('tr')).map(row => {
             return Array.from(row.querySelectorAll('td')).map(cell => cell.textContent.trim());
         });
-
+    
         const payload = {
             supplier_name: supplierName,
             table_data: tableData,
-            file_format: fileFormat
+            file_format: fileFormat,
+            days: days
         };
-
+    
         fetch(`${CONFIG.API_BASE_URL}/api/generate-stagnant-report`, {
             method: 'POST',
             headers: {
@@ -100,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('Erro ao gerar relatório. Verifique o console para mais detalhes.');
             });
     }
+    
 
     calculateButton.addEventListener('click', function () {
         const supplierName = suppliersSelect.value;

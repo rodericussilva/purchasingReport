@@ -104,12 +104,13 @@ def generate_stagnant_report():
         supplier = data.get('supplier_name', 'Fornecedor_Desconhecido')
         table_data = data.get('table_data', [])
         file_format = data.get('file_format', 'pdf')
+        days = data.get('days', 120)
 
         if not table_data:
             return jsonify({"error": "Nenhum dado encontrado para geração do relatório."}), 400
 
         if file_format == 'pdf':
-            file_path = generate_pdf_stagnant(supplier, table_data)
+            file_path = generate_pdf_stagnant(supplier, table_data, days)
         elif file_format == 'excel':
             file_path = generate_excel(supplier, table_data)
         elif file_format == 'csv':
