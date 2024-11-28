@@ -76,9 +76,10 @@ def generate_expiration_report():
         supplier = data.get('supplier_name', 'Fornecedor_Desconhecido')
         table_data = data.get('table_data', [])
         file_format = data.get('file_format', 'pdf')
+        months = data.get('months', 12)
 
         if file_format == 'pdf':
-            file_path = generate_pdf_expiration(supplier, table_data)
+            file_path = generate_pdf_expiration(supplier, table_data, months)
         elif file_format == 'excel':
             file_path = generate_excel(supplier, table_data)
         elif file_format == 'csv':

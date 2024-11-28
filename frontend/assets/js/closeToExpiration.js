@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getItemsBelow1Year(supplierName, months) {
         const url = `${CONFIG.API_BASE_URL}/api/items-close-expiration?supplier_name=${encodeURIComponent(supplierName)}&months=${months}`;
-
+        
         fetch(url)
             .then(async response => {
                 if (!response.ok) {
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
             supplier_name: supplierName,
             table_data: tableData,
             file_format: fileFormat,
-            months: months
+            months: months  // Enviando o número de meses para o backend
         };
 
         fetch(`${CONFIG.API_BASE_URL}/api/generate_expiration_report`, {

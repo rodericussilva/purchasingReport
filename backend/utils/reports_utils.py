@@ -204,7 +204,7 @@ def generate_pdf_rupture(supplier, days_estimate, table_data):
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
 
-def generate_pdf_expiration(supplier, table_data):
+def generate_pdf_expiration(supplier, table_data, months):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     pdf_path = os.path.join(REPORTS_DIR, f'expiration_report_{supplier}_{timestamp}.pdf')
 
@@ -220,7 +220,7 @@ def generate_pdf_expiration(supplier, table_data):
         c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(110, height - 85, "TS DISTRIBUIDORA")
-        c.drawString(300, height - 70, "Relatório de Vencimentos")
+        c.drawString(300, height - 70, f"Relatório de Itens Próximos ao Vencimento ({months} meses)")
         c.setFont("Helvetica", 10)
         info_text = f"Fornecedor: {supplier}                                   Data de Geração: {datetime.now().strftime('%d/%m/%Y')}"
         c.drawString(60, height - 120, info_text)
@@ -277,25 +277,6 @@ def generate_pdf_expiration(supplier, table_data):
 
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
-
-def generate_excel(supplier, table_data):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    excel_path = os.path.join(REPORTS_DIR, f'expiration_report_{supplier}_{timestamp}.xlsx')
-
-    if not os.path.exists(REPORTS_DIR):
-        os.makedirs(REPORTS_DIR)
-
-    workbook = Workbook()
-    sheet = workbook.active
-
-    headers = ["Descrição", "Quantidade em Estoque", "Data do Vencimento", "Curva"]
-    sheet.append(headers)
-
-    for row in table_data:
-        sheet.append(row)
-
-    workbook.save(excel_path)
-    return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(excel_path)}"
 
 def generate_csv(supplier, table_data):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
