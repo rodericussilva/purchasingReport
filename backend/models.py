@@ -1461,7 +1461,7 @@ def fetch_items_within_months(months):
 
     return total_within_months
 
-def fetch_items_below_1_year(supplier_name):
+def fetch_items_close_to_expiration(supplier_name, months):
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -1497,7 +1497,7 @@ def fetch_items_below_1_year(supplier_name):
     cursor.execute(query, (supplier_name,))
     result = cursor.fetchall()
 
-    items_below_1_year = []
+    items_close_to_expiration = []
 
     for row in result:
         codigo = row.Codigo
@@ -1516,8 +1516,8 @@ def fetch_items_below_1_year(supplier_name):
 
         dias_para_vencimento = (data_vencimento - datetime.now().date()).days
 
-        if 0 <= dias_para_vencimento <= 365:
-            items_below_1_year.append({
+        if 0 <= dias_para_vencimento <= (months * 30):
+            items_close_to_expiration.append({
                 "codigo": codigo,
                 "descricao": descricao,
                 "quantidade_estoque": qtd_disponivel,
@@ -1528,7 +1528,8 @@ def fetch_items_below_1_year(supplier_name):
     cursor.close()
     connection.close()
 
-    return items_below_1_year
+    return items_close_to_expiration
+
 
 def fetch_total_items_stopped(days):
     connection = get_db_connection()

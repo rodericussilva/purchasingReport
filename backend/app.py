@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_days
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -105,20 +105,27 @@ def get_items_within_months():
         print(f"Erro ao buscar itens dentro de {months} meses: {e}")
         return jsonify({"error": str(e)}), 500
     
-@app.route('/api/items-below-1-year', methods=['GET'])
-def get_items_below_1_year():
+@app.route('/api/items-close-expiration', methods=['GET'])
+def get_items_close_to_expiration():
     try:
         supplier_name = request.args.get('supplier_name')
+        months = request.args.get('months', type=int)
+
         if not supplier_name:
             return jsonify({"error": "O fornecedor não foi especificado!"}), 400
+        
+        if not months:
+            return jsonify({"error": "O número de meses não foi especificado!"}), 400
 
-        items = fetch_items_below_1_year(supplier_name)
+        items = fetch_items_close_to_expiration(supplier_name, months)
+
         if not items:
-            return jsonify({"message": "Nenhum item abaixo de 1 ano para vencimento encontrado!"}), 404
+            return jsonify({"message": "Nenhum item encontrado para o fornecedor dentro do período especificado!"}), 404
 
         return jsonify(items), 200
+
     except Exception as e:
-        print(f"Erro ao buscar itens abaixo de 1 ano para vencimento: {e}")
+        print(f"Erro ao buscar itens próximos ao vencimento: {e}")
         return jsonify({"error": str(e)}), 500
     
 @app.route('/api/items-stopped', methods=['GET'])
