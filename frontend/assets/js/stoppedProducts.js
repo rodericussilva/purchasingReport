@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     const suppliersSelect = document.getElementById('suppliers');
+    const daysSelect = document.getElementById('count-days');
     const calculateButton = document.getElementById('calculate-button');
     const dataTableBody = document.getElementById('data-table');
     const reportSection = document.getElementById('report-generation-section');
@@ -21,8 +22,8 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => console.error('Erro ao carregar fornecedores:', error));
     }
 
-    function getStagnantItems(supplierName) {
-        const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?supplier_name=${encodeURIComponent(supplierName)}`;
+    function getStagnantItems(supplierName, days) {
+        const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?supplier_name=${encodeURIComponent(supplierName)}&days=${days}`;
 
         fetch(url)
             .then(response => {
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(data => {
                 if (data.length === 0) {
-                    alert(`${supplierName} não possui itens parados há mais de 120 dias.`);
+                    alert(`${supplierName} não possui itens parados há mais de ${days} dias.`);
                 } else {
                     populateTable(data);
                     reportSection.style.display = 'block';
@@ -102,13 +103,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     calculateButton.addEventListener('click', function () {
         const supplierName = suppliersSelect.value;
+        const days = daysSelect.value;
 
-        if (!supplierName) {
-            alert('Por favor, selecione um fornecedor.');
+        if (!supplierName || !days) {
+            alert('Por favor, selecione um fornecedor e uma quantidade de dias.');
             return;
         }
 
-        getStagnantItems(supplierName);
+        getStagnantItems(supplierName, days);
     });
 
     generateReportButton.addEventListener('click', generateReport);
