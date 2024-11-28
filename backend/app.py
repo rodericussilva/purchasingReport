@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_days
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_days
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -94,12 +94,15 @@ def get_rupture_risk_count():
     return jsonify({"total_risk_items": total_risk_items})
 
 @app.route('/api/maturity-items-count', methods=['GET'])
-def get_items_within_1_year():
+def get_items_within_months():
     try:
-        total_within_1_year = fetch_items_within_1_year()
-        return jsonify({"total_within_1_year": total_within_1_year}), 200
+        months = int(request.args.get('months', 12))  # Default to 12 months
+
+        total_within_months = fetch_items_within_months(months)
+        
+        return jsonify({"total_within_months": total_within_months}), 200
     except Exception as e:
-        print(f"Erro ao buscar itens dentro de 1 ano: {e}")
+        print(f"Erro ao buscar itens dentro de {months} meses: {e}")
         return jsonify({"error": str(e)}), 500
     
 @app.route('/api/items-below-1-year', methods=['GET'])

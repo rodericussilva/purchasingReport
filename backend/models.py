@@ -1410,10 +1410,11 @@ def fetch_total_rupture_risk(days_estimate):
 
     return total_risk_items
 
-def fetch_items_within_1_year():
+def fetch_items_within_months(months):
     connection = get_db_connection()
     cursor = connection.cursor()
 
+    # Query atualizada para aceitar o filtro de meses
     query = """
         SELECT 
             p.Codigo,
@@ -1437,7 +1438,7 @@ def fetch_items_within_1_year():
     cursor.execute(query)
     result = cursor.fetchall()
 
-    total_within_1_year = 0
+    total_within_months = 0
 
     for row in result:
         dat_prx_vct_lot = row.Dat_PrxVctLot
@@ -1452,13 +1453,13 @@ def fetch_items_within_1_year():
 
         dias_para_vencimento = (data_vencimento - datetime.now().date()).days
 
-        if 0 <= dias_para_vencimento <= 365:
-            total_within_1_year += 1
+        if 0 <= dias_para_vencimento <= (months * 30):
+            total_within_months += 1
 
     cursor.close()
     connection.close()
 
-    return total_within_1_year
+    return total_within_months
 
 def fetch_items_below_1_year(supplier_name):
     connection = get_db_connection()
