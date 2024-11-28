@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_120_days
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_days
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -131,15 +131,16 @@ def get_items_stopped():
 @app.route('/api/stagnant-items', methods=['GET'])
 def get_stagnant_items():
     supplier_name = request.args.get('supplier_name')
+    days = request.args.get('days', type=int, default=120)  # default value of 120 days
 
     if not supplier_name:
         return jsonify({"error": "O nome do fornecedor é obrigatório!"}), 400
 
     try:
-        stagnant_items = fetch_items_stopped_120_days(supplier_name)
+        stagnant_items = fetch_items_stopped_days(supplier_name, days)
         
         if not stagnant_items:
-            return jsonify({"message": "Nenhum item parado há mais de 120 dias encontrado para este fornecedor!"}), 404
+            return jsonify({"message": f"Nenhum item parado há mais de {days} dias encontrado para este fornecedor!"}), 404
 
         return jsonify(stagnant_items), 200
 

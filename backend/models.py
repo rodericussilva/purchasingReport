@@ -1832,7 +1832,7 @@ def fetch_total_items_stopped(days):
 
     return total_stopped_items
 
-def fetch_items_stopped_120_days(supplier_name):
+def fetch_items_stopped_days(supplier_name, days):
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -2128,10 +2128,10 @@ def fetch_items_stopped_120_days(supplier_name):
         GROUP BY 
             p.Descricao, det.Qtd_SldCalPra, pr.Sta_AbcUniVenFab
         HAVING 
-            MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -120, GETDATE());
+            MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -?, GETDATE());
     """
 
-    cursor.execute(query, (supplier_name,))
+    cursor.execute(query, (supplier_name, days))
     results = cursor.fetchall()
 
     stagnant_items = []
