@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year, fetch_total_items_stopped_120_days, fetch_items_stopped_120_days
+from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_1_year, fetch_items_below_1_year, fetch_total_items_stopped, fetch_items_stopped_120_days
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -118,13 +118,14 @@ def get_items_below_1_year():
         print(f"Erro ao buscar itens abaixo de 1 ano para vencimento: {e}")
         return jsonify({"error": str(e)}), 500
     
-@app.route('/api/items-stopped-120-days', methods=['GET'])
-def get_items_stopped_120_days():
+@app.route('/api/items-stopped', methods=['GET'])
+def get_items_stopped():
     try:
-        total_stopped_120_days = fetch_total_items_stopped_120_days()
-        return jsonify({"total_stopped_120_days": total_stopped_120_days}), 200
+        days = int(request.args.get('days', 120))  # default value of 120 days
+        total_stopped_items = fetch_total_items_stopped(days)
+        return jsonify({"total_stopped_items": total_stopped_items}), 200
     except Exception as e:
-        print(f"Erro ao buscar itens parados a mais de 120 dias: {e}")
+        print(f"Erro ao buscar itens parados a mais de {days} dias: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/stagnant-items', methods=['GET'])

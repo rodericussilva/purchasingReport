@@ -61,26 +61,28 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    function loadItemsStopped120Days() {
+    function loadItemsStopped(days = 120) {
         const progressElement = document.getElementById("total-stopped-120-days");
         const loadingSpinnerStopped120 = document.getElementById("loading-spinner-120");
+        const stoppedCardTitle = document.querySelector(".superior-card .card-title");
 
         loadingSpinnerStopped120.style.display = "inline-block";
 
-        fetch(`${CONFIG.API_BASE_URL}/api/items-stopped-120-days`)
+        fetch(`${CONFIG.API_BASE_URL}/api/items-stopped?days=${days}`)
             .then(response => response.json())
             .then(data => {
-                if (data.total_stopped_120_days !== undefined) {
-                    const total = data.total_stopped_120_days;
+                if (data.total_stopped_items !== undefined) {
+                    const total = data.total_stopped_items;
                     loadingSpinnerStopped120.style.display = "none";
                     animateProgress(0, total, 2000, "total-stopped-120-days");
+
+                    stoppedCardTitle.innerHTML = `Itens parados a mais de ${days} dias <span></span>`;
                 } else {
                     progressElement.innerText = "0";
-                    console.error("Nenhum valor de itens parados a mais de 120 dias retornado.");
                 }
             })
             .catch(error => {
-                console.error("Erro ao carregar total de itens parados a mais de 120 dias:", error);
+                console.error(`Erro ao carregar itens parados a mais de ${days} dias:`, error);
                 loadingSpinnerStopped120.style.display = "none";
                 progressElement.innerText = "Erro ao carregar dados";
             });
@@ -111,25 +113,38 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    function updateStoppedItemsFilter(days) {
+        loadItemsStopped(days);
+    }
+
     function updateRuptureDays(days) {
         const selectedDaysSpan = document.getElementById("selected-days");
         selectedDaysSpan.textContent = `| ${days} dias`;
         loadRuptureRisk(days);
     }
 
-    // sets the days filter to a default value of 30 days when loading the page
-    const daysFilter = document.getElementById("days-filter");
-    daysFilter.addEventListener("click", (event) => {
+    const ruptureDaysFilter = document.getElementById("rupture-days-filter");
+    ruptureDaysFilter.addEventListener("click", (event) => {
         const target = event.target;
         if (target.classList.contains("dropdown-item")) {
             event.preventDefault();
-            const selectedDays = target.getAttribute("data-days");
+            const selectedDays = parseInt(target.getAttribute("data-days"), 10);
             updateRuptureDays(selectedDays);
         }
     });
 
+    const stoppedDaysFilter = document.getElementById("stopped-days-filter");
+    stoppedDaysFilter.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target.classList.contains("dropdown-item")) {
+            event.preventDefault();
+            const selectedDays = parseInt(target.getAttribute("data-days"), 10);
+            updateStoppedItemsFilter(selectedDays);
+        }
+    });
+
     loadTotalSuggestions();
-    updateRuptureDays(30); // default value of 30 days
-    loadItemsStopped120Days();
+    updateRuptureDays(30); // Default value for rupture risk
+    loadItemsStopped(120); // Default value for stopped items
     loadItemsWithin1Year();
 });

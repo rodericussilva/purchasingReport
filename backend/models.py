@@ -1529,7 +1529,7 @@ def fetch_items_below_1_year(supplier_name):
 
     return items_below_1_year
 
-def fetch_total_items_stopped_120_days():
+def fetch_total_items_stopped(days):
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -1819,18 +1819,18 @@ def fetch_total_items_stopped_120_days():
         GROUP BY 
             p.Codigo, p.Descricao, f.Fantasia
         HAVING 
-            MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -120, GETDATE());
+            MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -?, GETDATE());
     """
 
-    cursor.execute(query)
+    cursor.execute(query, (days,))
     result = cursor.fetchall()
 
-    total_stopped_120_days = len(result)
+    total_stopped_items = len(result)
 
     cursor.close()
     connection.close()
 
-    return total_stopped_120_days
+    return total_stopped_items
 
 def fetch_items_stopped_120_days(supplier_name):
     connection = get_db_connection()
