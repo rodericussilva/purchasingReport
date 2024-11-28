@@ -44,12 +44,12 @@
         <main id="main" class="main">
 
             <div class="pagetitle">
-                <h1>Tabela de Itens Abaixo de 1 Ano para o Vencimento</h1>
+                <h1>Tabela de Itens Próximos ao Vencimento</h1>
                 <nav>
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="/frontend/index.html">Home</a></li>
                         <li class="breadcrumb-item">Tabela</li>
-                        <li class="breadcrumb-item active">Próximo ao Vencimento</li>
+                        <li class="breadcrumb-item active">Próximos ao Vencimento</li>
                     </ol>
                 </nav>
             </div>
@@ -60,7 +60,7 @@
 
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title">Itens Abaixo de 1 Ano</h5>
+                                <h5 class="card-title">Itens Próximos ao Vencimento</h5>
                                 <div class="row mb-3">
                                     <div class="col-md-4">
                                         <label for="suppliers" class="form-label text-light mt-2">Fornecedores</label>
@@ -69,7 +69,27 @@
                                         </select>
                                     </div> <br>
 
-                                    <div class="col-md-3 d-grid">
+                                    <div class="col-md-4">
+                                        <label for="caount-days" class="form-label text-light mt-2">Quantidade de Meses</label>
+                                        <select id="select-month" class="form-select">
+                                            <option value="" disabled selected>Selecione um Valor</option>
+                                            <option value="13">13 meses</option>
+                                            <option value="12">12 meses</option>
+                                            <option value="11">11 meses</option>
+                                            <option value="10">10 meses</option>
+                                            <option value="9">09 meses</option>
+                                            <option value="8">08 meses</option>
+                                            <option value="7">07 meses</option>
+                                            <option value="6">06 meses</option>
+                                            <option value="5">05 meses</option>
+                                            <option value="4">04 meses</option>
+                                            <option value="3">03 meses</option>
+                                            <option value="2">02 meses</option>
+                                            <option value="1">01 mês</option>
+                                        </select>
+                                    </div> <br>
+
+                                    <div class="col-md-4 d-grid">
                                         <label for="calculate-rupture" class="form-label text-light black-text mt-2">Enviar</label>
                                         <button id="calculate-button" class="btn btn-success">Carregar Itens</button>
                                     </div>
