@@ -88,26 +88,29 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    function loadItemsWithin1Year() {
+    function loadItemsWithinMonths(months = 12) {
         const progressElement = document.getElementById("total-maturity-items");
         const loadingSpinnerMaturity = document.getElementById("loading-spinner-maturity");
+        const maturityCardTitle = document.querySelector(".maturity-card .card-title");
 
         loadingSpinnerMaturity.style.display = "inline-block";
 
-        fetch(`${CONFIG.API_BASE_URL}/api/maturity-items-count`)
+        fetch(`${CONFIG.API_BASE_URL}/api/maturity-items-count?months=${months}`)
             .then(response => response.json())
             .then(data => {
-                if (data.total_within_1_year !== undefined) {
-                    const total = data.total_within_1_year;
+                if (data.total_within_months !== undefined) {
+                    const total = data.total_within_months;
                     loadingSpinnerMaturity.style.display = "none";
                     animateProgress(0, total, 2000, "total-maturity-items");
+
+                    maturityCardTitle.innerHTML = `Itens abaixo de ${months} ${months > 1 ? 'meses' : 'mês'} <span></span>`;
                 } else {
-                    progressElement.innerText = "0";
-                    console.error("Nenhum valor de itens abaixo de 1 ano retornado.");
+                    progressElement.innerText = "";
+                    console.error(`Nenhum valor de itens abaixo de ${months} meses retornado.`);
                 }
             })
             .catch(error => {
-                console.error("Erro ao carregar total de itens abaixo de 1 ano:", error);
+                console.error(`Erro ao carregar itens abaixo de ${months} meses:`, error);
                 loadingSpinnerMaturity.style.display = "none";
                 progressElement.innerText = "Erro ao carregar dados";
             });
@@ -143,8 +146,18 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    const maturityDaysFilter = document.getElementById("days-filter-maturity");
+    maturityDaysFilter.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target.classList.contains("dropdown-item")) {
+            event.preventDefault();
+            const selectedMonths = parseInt(target.getAttribute("data-months"), 10);
+            loadItemsWithinMonths(selectedMonths);
+        }
+    });
+
     loadTotalSuggestions();
     updateRuptureDays(30); // Default value for rupture risk
     loadItemsStopped(120); // Default value for stopped items
-    loadItemsWithin1Year();
+    loadItemsWithinMonths(12);
 });
