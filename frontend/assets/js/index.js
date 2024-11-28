@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     loadingSpinnerMaturity.style.display = "none";
                     animateProgress(0, total, 2000, "total-maturity-items");
 
-                    maturityCardTitle.innerHTML = `Itens abaixo de ${months} ${months > 1 ? 'meses' : 'mês'} <span></span>`;
+                    maturityCardTitle.innerHTML = `Itens próximos ao vencimento: ${months} ${months > 1 ? 'meses' : 'mês'} <span></span>`;
                 } else {
                     progressElement.innerText = "";
                     console.error(`Nenhum valor de itens abaixo de ${months} meses retornado.`);
