@@ -64,12 +64,23 @@
               <div class="card-body">
                 <h5 class="card-title">Sugestão de Compras</h5>
 
-                <div class="row mb-3">
-                  <div class="col-md-3">
+                <div class="row mb-4">
+                  <div class="col-md-4">
                     <label for="suppliers" class="form-label text-light mt-2">Fornecedores</label>
-                    <select id="suppliers" class="form-select">
-                        <option value="" disabled selected>Selecione um fornecedor</option>
-                    </select>
+                    <div class="dropdown">
+                      <button class="btn btn-success dropdown-toggloe w-100" type="button" id="suppliers-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Selecionar Fornecedores
+                      </button>
+                      <div class="dropdown-menu w-100" aria-labelledby="supplier-dropdown">
+                        <div class="dropdown-item">
+                          <input type="checkbox" id="select-all" class="form-check-input me-2">
+                          <label for="select-all" class="form-check-label">Selecionar todos</label>
+                        </div>
+                        <div id="suppliers-checkboxes">
+                          <!-- suppliers dynamically rendered here -->
+                        </div>
+                      </div>
+                    </div>
                   </div> <br>
                   
                   <div class="col-md-3">
@@ -82,9 +93,9 @@
                     <input type="number" id="supplyDays" class="form-control" placeholder="Digite os dias">
                   </div> <br>
 
-                  <div class="col-md-3 d-grid">
+                  <div class="col-md-2 d-grid">
                     <label for="calculate-suggestion" class="form-label text-light black-text mt-2">Enviar</label>
-                    <button id="calculate-button" class="btn btn-success">Calcular Sugestões de Compra</button>
+                    <button id="calculate-button" class="btn btn-success">Calcular</button>
                   </div>
 
                 </div>

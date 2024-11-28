@@ -520,3 +520,43 @@ h6 {
 .table th {
   text-align: center; 
 }
+
+/* Custom style for individual checkbox */
+.supplier-checkbox {
+  background-color: #fff;
+  border: 2px solid black;
+  width: 18px;
+  height: 18px;
+}
+
+/* Checkbox style when checked */
+.supplier-checkbox:checked {
+  background-color: rgba(0, 128, 0, 0.856);
+  border-color: rgb(1, 71, 1);
+}
+
+/* Label style for greater contrast */
+.supplier-checkbox + label {
+  color: #333;
+  font-size: 16px;
+}
+
+/* 'Select All' checkbox style */
+#select-all {
+  background-color: #fff;
+  border: 2px solid black;
+  width: 18px;
+  height: 18px;
+}
+
+/* Style of 'Select All' checkbox when checked */
+#select-all:checked {
+  background-color: rgba(0, 128, 0, 0.856);
+  border-color: rgb(1, 71, 1);
+}
+
+/* Label style for 'Select All' */
+#select-all + label {
+  color: #333;
+  font-size: 16px;
+}
