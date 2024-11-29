@@ -9,22 +9,28 @@ lock = threading.Lock()
 @report.route('/generate_report', methods=['POST'])
 def generate_report():
     if not lock.acquire(blocking=False):
-        return jsonify({"error": "Um relatório já está sedo gerado"}), 429
+        return jsonify({"error": "Um relatório já está sendo gerado"}), 429
 
     try:
         data = request.get_json()
-        supplier = data['supplier']
+
+        # print("Dados recebidos:", data)
+
+        suppliers = data['suppliers']
         replacement_days = data['replacement_days']
         supply_days = data['supply_days']
         table_data = data['table_data']
         file_format = data.get('file_format', 'pdf')
 
+        if not suppliers or not table_data:
+            return jsonify({"error": "Dados de fornecedor ou tabela estão vazios"}), 400
+
         if file_format == 'pdf':
-            file_path = generate_pdf(supplier, replacement_days, supply_days, table_data)
+            file_path = generate_pdf(suppliers, replacement_days, supply_days, table_data)
         elif file_format == 'excel':
             file_path = generate_excel(table_data)
         elif file_format == 'csv':
-            file_path = generate_csv(supplier, table_data)
+            file_path = generate_csv(suppliers, table_data)
         else:
             return jsonify({"error": "Formato de arquivo inválido"}), 400
 
@@ -32,8 +38,9 @@ def generate_report():
             "message": "Relatório gerado com sucesso",
             "file_path": file_path
         })
+
     except Exception as e:
-        print(f"Erro ao gerar relatório: {e}")
+        print(f"Erro ao gerar relatório: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         lock.release()

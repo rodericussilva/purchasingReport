@@ -1,3 +1,5 @@
+let productsData = [];
+
 document.addEventListener('DOMContentLoaded', function () {
     const suppliersDropdown = document.getElementById('suppliers-dropdown');
     const suppliersCheckboxesContainer = document.getElementById('suppliers-checkboxes');
@@ -23,11 +25,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     suppliersCheckboxesContainer.innerHTML = '<div class="text-muted">Nenhum fornecedor disponível</div>';
                     return;
                 }
-    
+
                 suppliers.forEach(supplier => {
                     const checkboxDiv = document.createElement('div');
                     checkboxDiv.classList.add('dropdown-item');
-                    checkboxDiv.innerHTML = `
+                    checkboxDiv.innerHTML = ` 
                         <input type="checkbox" id="supplier-${supplier.nome}" class="supplier-checkbox form-check-input me-2" value="${supplier.nome}">
                         <label for="supplier-${supplier.nome}" class="form-check-label">${supplier.nome}</label>
                     `;
@@ -67,46 +69,79 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function getProductsBySuppliers(suppliers, replacementDays, supplyDays) {
+        const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
+        const url = `${CONFIG.API_BASE_URL}/api/products?${suppliersQuery}&replacement_days=${replacementDays}&supply_days=${supplyDays}`;
+
         dataTableContainer.innerHTML = '';
-        suppliers.forEach(supplierName => {
-            fetch(`${CONFIG.API_BASE_URL}/api/products?supplier_name=${encodeURIComponent(supplierName)}&replacement_days=${replacementDays}&supply_days=${supplyDays}`)
-                .then(response => response.json())
-                .then(products => {
-                    if (products.length > 0) {
-                        createTableForSupplier(supplierName, products);
-                    } else {
-                        console.warn(`Nenhum produto encontrado para o fornecedor: ${supplierName}`);
-                    }
-                })
-                .catch(error => console.error(`Erro ao carregar produtos para o fornecedor ${supplierName}:`, error));
-        });
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar produtos. Verifique os parâmetros e tente novamente.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.length === 0) {
+                    alert('Nenhum produto encontrado para os fornecedores selecionados.');
+                    return;
+                }
+
+                productsData = data;
+
+                data.forEach(({ fornecedor, produtos }) => {
+                    createTableForSupplier(fornecedor, produtos);
+                });
+
+                reportSection.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Erro ao carregar produtos:', error);
+            });
     }
 
     function createTableForSupplier(supplierName, products) {
         const supplierSection = document.createElement('div');
         supplierSection.classList.add('mb-4');
-
+        
         const title = document.createElement('h5');
         title.textContent = `Fornecedor: ${supplierName}`;
-        title.classList.add('mt-3', 'text-primary');
-
+        title.classList.add('mt-3', 'text-secundary');
+        
+        const tableWrapper = document.createElement('div');
+        tableWrapper.classList.add('table-responsive');
+        
         const table = document.createElement('table');
         table.classList.add('table', 'table-striped', 'table-bordered');
+        
+        const mesLabels = products[0].mes_labels;
+
         table.innerHTML = `
             <thead>
                 <tr>
-                    <th class="text-center">Descrição</th>
+                    <th class="col-md-3 text-center">Descrição</th>
                     <th class="text-center">Cobertura</th>
-                    <th class="text-center">Mês 0</th>
-                    <th class="text-center">Mês 1</th>
-                    <th class="text-center">Mês 2</th>
-                    <th class="text-center">Mês 3</th>
+                    <th class="text-center" colspan="4">Unidades Faturadas</th>
                     <th class="text-center">Méd. Mês</th>
                     <th class="text-center">Est. Disponível</th>
-                    <th class="text-center">Est. Mínimo</th>
+                    <th class="text-center">Est. Minimo</th>
                     <th class="text-center">Sugestão de Compra</th>
                     <th class="text-center">Valor de Compra</th>
                     <th class="text-center">Curva</th>
+                </tr>
+                <tr>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
+                    <th class="month text-center">${mesLabels.mes3}</th>
+                    <th class="month text-center">${mesLabels.mes2}</th>
+                    <th class="month text-center">${mesLabels.mes1}</th>
+                    <th class="month text-center">${mesLabels.mes0}</th>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
+                    <th class="text-center"> - </th>
                 </tr>
             </thead>
             <tbody>
@@ -115,10 +150,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <tr>
                             <td>${product.descricao}</td>
                             <td>${product.cobertura}</td>
-                            <td>${product.unidades_faturadas_mes0}</td>
-                            <td>${product.unidades_faturadas_mes1}</td>
-                            <td>${product.unidades_faturadas_mes2}</td>
                             <td>${product.unidades_faturadas_mes3}</td>
+                            <td>${product.unidades_faturadas_mes2}</td>
+                            <td>${product.unidades_faturadas_mes1}</td>
+                            <td>${product.unidades_faturadas_mes0}</td>
                             <td>${product.media_faturada}</td>
                             <td>${product.estoque_disponivel}</td>
                             <td>${product.estoque_minimo}</td>
@@ -128,35 +163,80 @@ document.addEventListener('DOMContentLoaded', function () {
                         </tr>`).join('')}
             </tbody>
         `;
-
+        
+        tableWrapper.appendChild(table);
         supplierSection.appendChild(title);
-        supplierSection.appendChild(table);
+        supplierSection.appendChild(tableWrapper);
         dataTableContainer.appendChild(supplierSection);
     }
 
     calculateButton.addEventListener('click', function () {
         const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
-        const replacementDays = parseInt(replacementDaysInput.value) || 0;
-        const supplyDays = parseInt(supplyDaysInput.value) || 0;
+        const replacementDays = parseInt(replacementDaysInput.value, 10) || 0;
+        const supplyDays = parseInt(supplyDaysInput.value, 10) || 0;
 
-        if (selectedSuppliers.length > 0 && replacementDays > 0 && supplyDays > 0) {
-            getProductsBySuppliers(selectedSuppliers, replacementDays, supplyDays);
-        } else {
-            alert('Por favor, preencha todos os campos: fornecedores, dias de reposição e dias de suprimento.');
+        if (selectedSuppliers.length === 0) {
+            alert('Por favor, selecione pelo menos um fornecedor.');
+            return;
         }
+
+        if (replacementDays <= 0 || supplyDays <= 0) {
+            alert('Por favor, insira valores válidos para dias de reposição e dias de suprimento.');
+            return;
+        }
+
+        getProductsBySuppliers(selectedSuppliers, replacementDays, supplyDays);
     });
 
     generateReportButton.addEventListener('click', function () {
         const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
-        const replacementDays = parseInt(replacementDaysInput.value) || 0;
-        const supplyDays = parseInt(supplyDaysInput.value) || 0;
+        const replacementDays = parseInt(replacementDaysInput.value, 10) || 0;
+        const supplyDays = parseInt(supplyDaysInput.value, 10) || 0;
         const fileFormat = fileFormatSelect.value;
-
+    
         if (selectedSuppliers.length === 0 || replacementDays === 0 || supplyDays === 0 || !fileFormat) {
             alert('Preencha todos os campos antes de gerar o relatório.');
             return;
         }
-
+    
+        const productsData = [];
+    
+        dataTableContainer.querySelectorAll('.mb-4').forEach(supplierSection => {
+            const supplierNameElement = supplierSection.querySelector('h5');
+            
+            if (!supplierNameElement) return;
+    
+            const supplierName = supplierNameElement.textContent.replace('Fornecedor: ', '');
+            
+            const products = [];
+    
+            supplierSection.querySelectorAll('tbody tr').forEach(row => {
+                const productData = {
+                    descricao: row.cells[0]?.textContent || '',
+                    cobertura: row.cells[1]?.textContent || '',
+                    unidades_faturadas_mes3: row.cells[2]?.textContent || '',
+                    unidades_faturadas_mes2: row.cells[3]?.textContent || '',
+                    unidades_faturadas_mes1: row.cells[4]?.textContent || '',
+                    unidades_faturadas_mes0: row.cells[5]?.textContent || '',
+                    media_faturada: row.cells[6]?.textContent || '',
+                    estoque_disponivel: row.cells[7]?.textContent || '',
+                    estoque_minimo: row.cells[8]?.textContent || '',
+                    sugestao_compra: row.cells[9]?.textContent || '',
+                    valor_venda: row.cells[10]?.textContent || '',
+                    curva: row.cells[11]?.textContent || '',
+                    mes_labels: {
+                        mes0: row.cells[2]?.textContent || 'Mês 0',
+                        mes1: row.cells[3]?.textContent || 'Mês 1',
+                        mes2: row.cells[4]?.textContent || 'Mês 2',
+                        mes3: row.cells[5]?.textContent || 'Mês 3',
+                    }
+                };
+                products.push(productData);
+            });
+    
+            productsData.push({ fornecedor: supplierName, produtos: products });
+        });
+    
         fetch(`${CONFIG.API_BASE_URL}/api/generate_report`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -164,22 +244,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 suppliers: selectedSuppliers,
                 replacement_days: replacementDays,
                 supply_days: supplyDays,
-                file_format: fileFormat,
+                table_data: productsData, 
+                file_format: fileFormat
             }),
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.file_path) {
-                    window.open(data.file_path, '_blank');
-                } else {
-                    alert('Erro ao gerar o relatório.');
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao gerar relatório:', error);
-                alert('Erro ao gerar relatório. Verifique o console para mais detalhes.');
-            });
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.file_path) {
+                window.open(data.file_path, '_blank');
+            } else {
+                alert('Erro ao gerar o relatório.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao gerar relatório:', error);
+            alert(`Erro ao gerar relatório, ${error}`);
+        });
+    });    
 
     getSuppliers();
 });

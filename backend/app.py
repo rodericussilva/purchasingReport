@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_supplier, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days
+from models import fetch_suppliers, fetch_products_by_suppliers, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -29,19 +29,20 @@ def get_suppliers():
 @app.route('/api/products', methods=['GET'])
 def get_products():
     try:
-        supplier_name = request.args.get('supplier_name')
+        suppliers = request.args.getlist('supplier_name[]')
         replacement_days = int(request.args.get('replacement_days', 0))
         supply_days = int(request.args.get('supply_days', 0))
 
-        if not supplier_name:
-            return jsonify({'error': 'Fornecedor não especificado'}), 400
+        if not suppliers:
+            return jsonify({'error': 'Nenhum fornecedor especificado'}), 400
 
-        produtos = fetch_products_by_supplier(supplier_name, replacement_days, supply_days)
+        products = fetch_products_by_suppliers(suppliers, replacement_days, supply_days)
 
-        return jsonify(produtos), 200
+        return jsonify(products), 200
     except Exception as e:
+        print(f"Erro ao buscar produtos: {e}")
         return jsonify({'error': str(e)}), 500
-
+    
 @app.route('/static/reports_files/<path:filename>')
 def serve_report(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)

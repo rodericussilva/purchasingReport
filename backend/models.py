@@ -287,11 +287,14 @@ def fetch_suppliers():
     connection.close()
     return suppliers
 
-def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
+def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
+
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    query = """
+    placeholders = ', '.join(['?'] * len(supplier_names))
+    
+    query = f"""
         SELECT
 	        f.Fantasia,
             p.Descricao,
@@ -350,7 +353,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
 	        FABRI f ON p.Cod_Fabricante = f.Codigo
         JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
         JOIN V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
-        WHERE f.Fantasia = ?
+        WHERE f.Fantasia IN ({placeholders})
         AND f.Fantasia NOT IN (
             '3M', 
             'CANNONE', 
@@ -637,10 +640,10 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
             pr.Dat_UltVen
         ORDER BY p.Descricao ASC
     """
-    cursor.execute(query, (supplier_name,))
+    cursor.execute(query, supplier_names)
     result = cursor.fetchall()
 
-    products = []
+    suppliers = {}
 
     for row in result:
         formatted_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
@@ -654,7 +657,7 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
         if row.Qtd_SldCalPra == 0 and sugestao_compra == 0 and row.Qtd_EstMin > 0:
             sugestao_compra = row.Qtd_EstMin
         
-        products.append({
+        product ={
             'descricao': row.Descricao,
             'unidades_faturadas_mes0': row.Qtd_FatMes0,
             'unidades_faturadas_mes1': row.Qtd_FatMes1,
@@ -673,11 +676,17 @@ def fetch_products_by_supplier(supplier_name, replacement_days, supply_days):
                 'mes2': row.Des_VenMes2,
                 'mes3': row.Des_VenMes3
             }
-        })
+        }
+
+        if row.Fantasia not in suppliers:
+            suppliers[row.Fantasia] = []
+
+        suppliers[row.Fantasia].append(product)
 
     cursor.close()
     connection.close()
-    return products
+    
+    return [{"fornecedor": key, "produtos": value} for key, value in suppliers.items()]
 
 def fetch_total_suggestions():
     connection = get_db_connection()
