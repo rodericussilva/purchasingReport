@@ -14,8 +14,6 @@ def generate_report():
     try:
         data = request.get_json()
 
-        # print("Dados recebidos:", data)
-
         suppliers = data['suppliers']
         replacement_days = data['replacement_days']
         supply_days = data['supply_days']
@@ -25,8 +23,24 @@ def generate_report():
         if not suppliers or not table_data:
             return jsonify({"error": "Dados de fornecedor ou tabela estão vazios"}), 400
 
+        supplier_data_list = []
+        
+        for supplier in suppliers:
+            supplier_data = {
+                'supplier': supplier,
+                'replacement_days': replacement_days,
+                'supply_days': supply_days,
+                'produtos': []
+            }
+            
+            for supplier_entry in table_data:
+                if supplier in supplier_entry['fornecedor']:
+                    supplier_data['produtos'] = supplier_entry['produtos']
+
+            supplier_data_list.append(supplier_data)
+
         if file_format == 'pdf':
-            file_path = generate_pdf(suppliers, replacement_days, supply_days, table_data)
+            file_path = generate_pdf(supplier_data_list)
         elif file_format == 'excel':
             file_path = generate_excel(table_data)
         elif file_format == 'csv':
@@ -44,6 +58,7 @@ def generate_report():
         return jsonify({'error': str(e)}), 500
     finally:
         lock.release()
+
 
 @report.route('/generate_rupture_report', methods=['POST'])
 def generate_rupture_report():

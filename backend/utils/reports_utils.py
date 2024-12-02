@@ -8,114 +8,109 @@ load_dotenv()
 
 REPORTS_DIR = os.path.join(os.getcwd(), 'static', 'reports_files')
 
-def generate_pdf(supplier, replacement_days, supply_days, table_data):
-    if not table_data or len(table_data) == 0:
-        raise ValueError("Dados de tabela estão vazios.")
-    
-    mesLabels = table_data[0].get('produtos', [{}])[0].get('mes_labels', {})
-    if not mesLabels:
-        raise ValueError("Mes labels não encontrados nos dados.")
-    
+def generate_pdf(supplier_data_list):
+    if not isinstance(supplier_data_list, list) or len(supplier_data_list) == 0:
+        raise ValueError("Os dados dos fornecedores estão vazios ou têm formato inválido.")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    pdf_path = os.path.join(REPORTS_DIR, f'report_{supplier}_{timestamp}.pdf')
-    
+    pdf_path = os.path.join(REPORTS_DIR, f'report_{timestamp}.pdf')
+
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR)
 
     c = canvas.Canvas(pdf_path, pagesize=landscape(A4))
     width, height = landscape(A4)
 
+    margin_bottom = 50
+    margin_top = 50
+    margin_left = 60
+    margin_right = 60
+    row_height = 12 
+
     def draw_header():
-        """Desenha o cabeçalho com as informações principais."""
         logo_path = "static/logo-removebg-preview.png"
         logo_width, logo_height = 40, 40
-        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
+        c.drawImage(logo_path, margin_left, height - margin_top - 40, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(105, height - 85, "TS DISTRIBUIDORA")
-        c.drawString(300, height - 70, "Tabela de Sugestões de Compras")
+        c.drawString(margin_left + 45, height - margin_top - 25, "TS DISTRIBUIDORA")
+        c.drawString(margin_left + 240, height - margin_top - 10, "Tabela de Sugestões de Compras")
 
+    def draw_supplier_info(supplier, replacement_days, supply_days, table_y):
         c.setFont("Helvetica", 10)
-        info_text = f"Fabricante: {supplier}         Dias de Reposição: {replacement_days}         Dias de Suprimento: {supply_days}"
-        c.drawString(60, height - 120, info_text)
+        info_text = f"Fabricante: {supplier}      Dias de Reposição: {replacement_days}      Dias de Suprimento: {supply_days}"
+        c.drawString(margin_left, table_y, info_text)
+        c.line(margin_left, table_y - 5, width - margin_right, table_y - 5)
+        return table_y - 20
 
-    # def draw_table_header(table_y, mesLabels):
-    #     """Desenha o cabeçalho da tabela."""
-    #     c.setFont("Helvetica-Bold", 7)
+    def draw_table_header(table_y, col_positions):
+        c.setFont("Helvetica-Bold", 7)
+        headers = [
+            "Descrição", "Cobertura", " ", " ", 
+            " ", " ", "Média Mês", 
+            "Estoque Disponível", "Sugestão de Compra", "Valor de Compra", "Curva"
+        ]
+        for i, header in enumerate(headers):
+            c.drawString(col_positions[i] + 5, table_y - 10, header)
+        return table_y - 25
 
-    #     columns = [
-    #         "Descrição", "Cobertura", 
-    #         mesLabels.get('mes3', 'Mês 3'), mesLabels.get('mes2', 'Mês 2'), 
-    #         mesLabels.get('mes1', 'Mês 1'), mesLabels.get('mes0', 'Mês 0'), 
-    #         "Média Mês", "Estoque Disponível", "Sugestão de Compra", 
-    #         "Valor de Compra", "Curva"
-    #     ]
+    def draw_table_content(produtos, table_y, col_positions, headers, row_height, margin_bottom):
+        rows_on_page = 0
+        max_rows_per_page = 20
 
-    #     col_widths = [180, 50, 30, 30, 30, 30, 60, 80, 90, 80, 30]
-
-    #     # Criando o cabeçalho como uma única linha
-    #     x_position = 60
-    #     for i, column in enumerate(columns):
-    #         c.drawString(x_position + 5, table_y - 10, column)
-    #         x_position += col_widths[i]
-
-    #     table_width = sum(col_widths)
-    #     c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
-
-    #     x_position = 60
-    #     for width in col_widths:
-    #         c.line(x_position, table_y, x_position, table_y - 20)
-    #         x_position += width
-
-    #     return table_y - 25
-
-    def draw_row_line(table_y, col_widths):
-        """Desenha a linha de separação entre as linhas da tabela."""
-        table_width = sum(col_widths)
-        c.line(60, table_y, 60 + table_width, table_y)
-
-    row_height = 15
-    max_rows_per_page = 20
-
-    # Inicia a construção do PDF
-    draw_header()
-    table_y = height - 150
-    #table_y = draw_table_header(table_y, mesLabels)
-    rows_on_page = 0
-
-    c.setFont("Helvetica", 7)
-
-    for supplier_data in table_data:
-        for product in supplier_data['produtos']:
-            if rows_on_page >= max_rows_per_page:
-                c.showPage()
-                draw_header()
-                table_y = height - 150
-                #table_y = draw_table_header(table_y, mesLabels)
+        for product in produtos:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                table_y = new_page()
+                table_y = draw_table_header(table_y, col_positions)
                 rows_on_page = 0
 
-            x_position = 60
-            product_data = [
-                product['descricao'], product['cobertura'], 
-                product['unidades_faturadas_mes3'], product['unidades_faturadas_mes2'],
-                product['unidades_faturadas_mes1'], product['unidades_faturadas_mes0'],
-                product['media_faturada'], product['estoque_disponivel'],
-                product['sugestao_compra'], product['valor_venda'], product['curva']
-            ]
+            c.setFont("Helvetica", 7)
+            for i, col_position in enumerate(col_positions):
+                c.drawString(col_position + 5, table_y - 10, str(product.get(headers[i], 'N/A')))
 
-            col_widths = [180, 50, 30, 30, 30, 30, 60, 80, 90, 80, 30]
-            for i, cell in enumerate(product_data):
-                c.drawString(x_position + 5, table_y - 10, str(cell))
-                x_position += col_widths[i]
-
-            draw_row_line(table_y, col_widths)
+            draw_row_line(table_y, col_positions)
             table_y -= row_height
             rows_on_page += 1
 
+        return table_y
+
+    def draw_row_line(table_y, col_positions):
+        c.line(col_positions[0], table_y, col_positions[-1] + 30, table_y)
+
+    def new_page():
+        c.showPage()
+        draw_header()
+        c.setFont("Helvetica", 7)
+        return height - margin_top - 80
+
+    draw_header()
+    c.setFont("Helvetica", 7)
+    table_y = height - margin_top - 80
+
+    col_positions = [margin_left, margin_left + 180, margin_left + 230, margin_left + 270, margin_left + 310, margin_left + 350, margin_left + 400, margin_left + 440, margin_left + 520, margin_left + 610, margin_left + 695]
+    headers = [
+        "descricao", "cobertura", "unidades_faturadas_mes3", "unidades_faturadas_mes2", 
+        "unidades_faturadas_mes1", "unidades_faturadas_mes0", "media_faturada", 
+        "estoque_disponivel", "sugestao_compra", "valor_venda", "curva"
+    ]
+
+    for supplier_data in supplier_data_list:
+        supplier = supplier_data.get("supplier", "Desconhecido")
+        replacement_days = supplier_data.get("replacement_days", "N/A")
+        supply_days = supplier_data.get("supply_days", "N/A")
+        produtos = supplier_data.get("produtos", [])
+
+        if not isinstance(produtos, list):
+            raise ValueError("A chave 'produtos' deve ser uma lista.")
+
+        if table_y - margin_bottom < 150:
+            table_y = new_page()
+
+        table_y = draw_supplier_info(supplier, replacement_days, supply_days, table_y)
+        table_y = draw_table_header(table_y, col_positions)
+        table_y = draw_table_content(produtos, table_y, col_positions, headers, row_height, margin_bottom)
+
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
-
-
-from openpyxl import Workbook
 
 def generate_excel(supplier, replacement_days, supply_days, table_data):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
