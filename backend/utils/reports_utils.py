@@ -25,7 +25,6 @@ def generate_pdf(supplier_data_list):
     margin_top = 50
     margin_left = 60
     margin_right = 60
-    row_height = 12 
 
     def draw_header():
         logo_path = "static/logo-removebg-preview.png"
@@ -53,28 +52,11 @@ def generate_pdf(supplier_data_list):
             c.drawString(col_positions[i] + 5, table_y - 10, header)
         return table_y - 25
 
-    def draw_table_content(produtos, table_y, col_positions, headers, row_height, margin_bottom):
-        rows_on_page = 0
-        max_rows_per_page = 20
-
-        for product in produtos:
-            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
-                table_y = new_page()
-                table_y = draw_table_header(table_y, col_positions)
-                rows_on_page = 0
-
-            c.setFont("Helvetica", 7)
-            for i, col_position in enumerate(col_positions):
-                c.drawString(col_position + 5, table_y - 10, str(product.get(headers[i], 'N/A')))
-
-            draw_row_line(table_y, col_positions)
-            table_y -= row_height
-            rows_on_page += 1
-
-        return table_y
-
     def draw_row_line(table_y, col_positions):
-        c.line(col_positions[0], table_y, col_positions[-1] + 30, table_y)
+        c.line(margin_left, table_y, col_positions[-1] + 30, table_y)
+
+    row_height = 12
+    max_rows_per_page = 20
 
     def new_page():
         c.showPage()
@@ -107,7 +89,27 @@ def generate_pdf(supplier_data_list):
 
         table_y = draw_supplier_info(supplier, replacement_days, supply_days, table_y)
         table_y = draw_table_header(table_y, col_positions)
-        table_y = draw_table_content(produtos, table_y, col_positions, headers, row_height, margin_bottom)
+        rows_on_page = 0
+
+        for product in produtos:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                table_y = new_page()
+                table_y = draw_supplier_info(supplier, replacement_days, supply_days, table_y)
+                table_y = draw_table_header(table_y, col_positions)
+                rows_on_page = 0
+
+            c.setFont("Helvetica", 7)
+            for i, col_position in enumerate(col_positions):
+                c.drawString(col_position + 5, table_y - 10, str(product.get(headers[i], 'N/A')))
+
+            draw_row_line(table_y, col_positions)
+            table_y -= row_height
+            rows_on_page += 1
+
+        if table_y - margin_bottom < 150:
+            table_y = new_page()
+
+        table_y -= 20
 
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
