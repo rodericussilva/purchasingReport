@@ -1755,75 +1755,71 @@ def fetch_items_within_months(months):
 
     return total_within_months
 
-def fetch_items_close_to_expiration(supplier_name, months):
+def fetch_items_close_to_expiration(supplier_names, months):
+    if not supplier_names:
+        raise ValueError("Nenhum fornecedor fornecido.")
+
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    query = """
-        SELECT 
-            p.Codigo,
-            p.Descricao,
-            pr.Qtd_Dispon,
-            pr.Sta_AbcUniVenFab,
-            pr.Dat_PrxVctLot,
-            MAX(ba.Dat_VctLot) AS Dat_VctLot_Mais_Recente
-        FROM 
-            PRODU p
-        JOIN 
-            FABRI f ON p.Cod_Fabricante = f.Codigo
-        JOIN 
-            PRXES pr ON pr.Cod_Produt = p.Codigo
-        LEFT JOIN 
-            V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
-        LEFT JOIN 
-            BALIT ba ON p.Codigo = ba.Cod_Produt
-        WHERE 
-            f.Fantasia = ?
-        GROUP BY 
-            p.Codigo,
-            p.Descricao,
-            pr.Qtd_Dispon,
-            pr.Sta_AbcUniVenFab,
-            pr.Dat_PrxVctLot
-        ORDER BY p.Descricao ASC;
+    placeholders = ', '.join(['?'] * len(supplier_names))
+
+    query = f"""
+    SELECT 
+        f.Fantasia,
+        p.Codigo,
+        p.Descricao,
+        pr.Qtd_Dispon,
+        pr.Sta_AbcUniVenFab,
+        pr.Dat_PrxVctLot,
+        MAX(ba.Dat_VctLot) AS Dat_VctLot_Mais_Recente
+    FROM 
+        PRODU p
+    JOIN 
+        FABRI f ON p.Cod_Fabricante = f.Codigo
+    JOIN 
+        PRXES pr ON pr.Cod_Produt = p.Codigo
+    LEFT JOIN 
+        V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
+    LEFT JOIN 
+        BALIT ba ON p.Codigo = ba.Cod_Produt
+    WHERE 
+        f.Fantasia IN ({placeholders})
+    GROUP BY 
+        f.Fantasia, p.Codigo, p.Descricao, pr.Qtd_Dispon, pr.Sta_AbcUniVenFab, pr.Dat_PrxVctLot
+    HAVING 
+        MAX(ba.Dat_VctLot) <= DATEADD(MONTH, ?, GETDATE())
+    ORDER BY 
+        f.Fantasia, p.Descricao;
     """
 
-    cursor.execute(query, (supplier_name,))
-    result = cursor.fetchall()
+    cursor.execute(query, (*supplier_names, months))
+    results = cursor.fetchall()
 
-    items_close_to_expiration = []
+    items_by_supplier = {}
 
-    for row in result:
-        codigo = row.Codigo
-        descricao = row.Descricao
-        qtd_disponivel = row.Qtd_Dispon
-        curva = row.Sta_AbcUniVenFab
-        dat_prx_vct_lot = row.Dat_PrxVctLot
-        dat_vct_lot_mais_recente = row.Dat_VctLot_Mais_Recente
+    for row in results:
+        data_vencimento = row.Dat_PrxVctLot or row.Dat_VctLot_Mais_Recente
+        if data_vencimento:
+            data_vencimento = data_vencimento.strftime('%d-%m-%Y') if isinstance(data_vencimento, datetime) else data_vencimento
 
-        if dat_prx_vct_lot:
-            data_vencimento = dat_prx_vct_lot.date() if isinstance(dat_prx_vct_lot, datetime) else dat_prx_vct_lot
-        elif dat_vct_lot_mais_recente:
-            data_vencimento = dat_vct_lot_mais_recente.date() if isinstance(dat_vct_lot_mais_recente, datetime) else dat_vct_lot_mais_recente
-        else:
-            continue
+        item = {
+            "codigo": row.Codigo,
+            "descricao": row.Descricao,
+            "quantidade_estoque": row.Qtd_Dispon,
+            "data_vencimento": data_vencimento,
+            "curva": row.Sta_AbcUniVenFab,
+        }
 
-        dias_para_vencimento = (data_vencimento - datetime.now().date()).days
+        if row.Fantasia not in items_by_supplier:
+            items_by_supplier[row.Fantasia] = []
 
-        if 0 <= dias_para_vencimento <= (months * 30):
-            items_close_to_expiration.append({
-                "codigo": codigo,
-                "descricao": descricao,
-                "quantidade_estoque": qtd_disponivel,
-                "data_vencimento": data_vencimento.strftime("%Y-%m-%d"),
-                "curva": curva
-            })
+        items_by_supplier[row.Fantasia].append(item)
 
     cursor.close()
     connection.close()
 
-    return items_close_to_expiration
-
+    return items_by_supplier
 
 def fetch_total_items_stopped(days):
     connection = get_db_connection()

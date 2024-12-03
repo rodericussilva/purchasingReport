@@ -102,22 +102,24 @@ def get_items_within_months():
     
 @app.route('/api/items-close-expiration', methods=['GET'])
 def get_items_close_to_expiration():
+    supplier_names = request.args.getlist('supplier_name[]')
+    months = request.args.get('months', type=int, default=12)
+
+    if not supplier_names:
+        return jsonify({"error": "Os nomes dos fornecedores são obrigatórios!"}), 400
+
     try:
-        supplier_name = request.args.get('supplier_name')
-        months = request.args.get('months', type=int)
+        items_by_supplier = fetch_items_close_to_expiration(supplier_names, months)
 
-        if not supplier_name:
-            return jsonify({"error": "O fornecedor não foi especificado!"}), 400
-        
-        if not months:
-            return jsonify({"error": "O número de meses não foi especificado!"}), 400
+        if not items_by_supplier:
+            return jsonify({"message": f"Nenhum item próximo ao vencimento em até {months} meses encontrado para os fornecedores especificados!"}), 404
 
-        items = fetch_items_close_to_expiration(supplier_name, months)
+        response_data = [
+            {"fornecedor": supplier, "produtos": produtos}
+            for supplier, produtos in items_by_supplier.items()
+        ]
 
-        if not items:
-            return jsonify({"message": "Nenhum item encontrado para o fornecedor dentro do período especificado!"}), 404
-
-        return jsonify(items), 200
+        return jsonify(response_data), 200
 
     except Exception as e:
         print(f"Erro ao buscar itens próximos ao vencimento: {e}")

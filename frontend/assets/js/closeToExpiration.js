@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectAllCheckbox = document.getElementById('select-all');
     const monthSelect = document.getElementById('select-month');
     const calculateButton = document.getElementById('calculate-button');
-    const dataTableContainer = document.getElementById('data-table-container');
+    const dataTableContainer = document.getElementById('data-table');
     const reportSection = document.getElementById('report-generation-section');
     const generateReportButton = document.getElementById('generate-report-button');
     const fileFormatSelect = document.getElementById('choose-file');
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getExpiringItems(suppliers, months) {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
-        const url = `${CONFIG.API_BASE_URL}/api/expiring-items?${suppliersQuery}&months=${months}`;
+        const url = `${CONFIG.API_BASE_URL}/api/items-close-expiration?${suppliersQuery}&months=${months}`;
 
         dataTableContainer.innerHTML = '';
         fetch(url)
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <tr>
                         <td class="text-center">${product.descricao}</td>
                         <td class="text-center">${product.quantidade_estoque}</td>
-                        <td class="text-center">${product.data_validade}</td>
+                        <td class="text-center">${product.data_vencimento}</td>
                         <td class="text-center">${product.curva}</td>
                     </tr>
                 `).join("")}
