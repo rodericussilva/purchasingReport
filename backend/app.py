@@ -135,19 +135,24 @@ def get_items_stopped():
 
 @app.route('/api/stagnant-items', methods=['GET'])
 def get_stagnant_items():
-    supplier_name = request.args.get('supplier_name')
+    supplier_names = request.args.getlist('supplier_name[]')
     days = request.args.get('days', type=int, default=120)  # default value of 120 days
 
-    if not supplier_name:
-        return jsonify({"error": "O nome do fornecedor é obrigatório!"}), 400
+    if not supplier_names:
+        return jsonify({"error": "Os nomes dos fornecedores são obrigatórios!"}), 400
 
     try:
-        stagnant_items = fetch_items_stopped_days(supplier_name, days)
-        
-        if not stagnant_items:
-            return jsonify({"message": f"Nenhum item parado há mais de {days} dias encontrado para este fornecedor!"}), 404
+        stagnant_items = fetch_items_stopped_days(supplier_names, days)
 
-        return jsonify(stagnant_items), 200
+        if not stagnant_items:
+            return jsonify({"message": f"Nenhum item parado há mais de {days} dias encontrado para os fornecedores especificados!"}), 404
+
+        response_data = [
+            {"fornecedor": supplier, "produtos": produtos}
+            for supplier, produtos in stagnant_items.items()
+        ]
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         print(f"Erro ao buscar itens parados: {e}")

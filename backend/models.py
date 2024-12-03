@@ -2128,12 +2128,18 @@ def fetch_total_items_stopped(days):
 
     return total_stopped_items
 
-def fetch_items_stopped_days(supplier_name, days):
+def fetch_items_stopped_days(supplier_names, days):
+    if not supplier_names:
+        raise ValueError("Nenhum fornecedor fornecido.")
+
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    query = """
+    placeholders = ", ".join("?" for _ in supplier_names)
+
+    query = f"""
         SELECT 
+            f.Fantasia,
             p.Descricao,
             det.Qtd_SldCalPra AS Quantidade_Estoque,
             MAX(v.DATA) AS Ultima_Venda,
@@ -2148,7 +2154,7 @@ def fetch_items_stopped_days(supplier_name, days):
             V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
         JOIN 
             PRXES pr ON pr.Cod_Produt = p.Codigo
-        WHERE f.Fantasia = ? AND
+        WHERE f.Fantasia IN ({placeholders}) AND
           f.Fantasia NOT IN (
             '3M', 
             'CANNONE', 
@@ -2422,25 +2428,30 @@ def fetch_items_stopped_days(supplier_name, days):
 		    'FALO SPORT'
         )
         GROUP BY 
-            p.Descricao, det.Qtd_SldCalPra, pr.Sta_AbcUniVenFab
+            p.Descricao, f.Fantasia, det.Qtd_SldCalPra, pr.Sta_AbcUniVenFab
         HAVING 
             MAX(v.DATA) IS NULL OR MAX(v.DATA) < DATEADD(DAY, -?, GETDATE());
     """
 
-    cursor.execute(query, (supplier_name, days))
+    cursor.execute(query, (*supplier_names, days))
     results = cursor.fetchall()
 
-    stagnant_items = []
+    stagnant_items_by_supplier = {}
     for row in results:
         ultima_venda = row.Ultima_Venda.strftime('%d-%m-%Y') if row.Ultima_Venda else 'Sem registro'
-        stagnant_items.append({
+        item = {
             "descricao": row.Descricao,
             "quantidade_estoque": row.Quantidade_Estoque,
             "ultima_venda": ultima_venda,
             "curva": row.Curva,
-        })
+        }
+
+        if row.Fantasia not in stagnant_items_by_supplier:
+            stagnant_items_by_supplier[row.Fantasia] = []
+
+        stagnant_items_by_supplier[row.Fantasia].append(item)
 
     cursor.close()
     connection.close()
 
-    return stagnant_items
+    return stagnant_items_by_supplier
