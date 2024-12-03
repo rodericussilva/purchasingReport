@@ -1348,6 +1348,7 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
         estoque_transito = row.Qtd_Transi
         estoque_minimo = row.Qtd_EstMin
         media_diaria_venda = row.media_diaria_venda
+        curva = row.Sta_AbcValFatFab
 
         previsao_vendas = media_diaria_venda * days_estimate
         risco_ruptura = estoque_disponivel - previsao_vendas
@@ -1364,7 +1365,8 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
                 'estoque_minimo': estoque_minimo,
                 'media_diaria_venda': media_diaria_venda,
                 'previsao_vendas': previsao_vendas,
-                'risco_ruptura': risco_ruptura
+                'risco_ruptura': risco_ruptura,
+                'curva': curva
             })
 
     cursor.close()

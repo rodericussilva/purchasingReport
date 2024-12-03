@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let suppliersData = [];
 
-    // Função para obter os fornecedores
     function getSuppliers() {
         fetch(`${CONFIG.API_BASE_URL}/api/suppliers`)
             .then(response => {
@@ -42,7 +41,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    // Atualiza o botão dropdown com os fornecedores selecionados
     function updateDropdownButtonLabel() {
         const selectedCheckboxes = Array.from(document.querySelectorAll(".supplier-risk-checkbox:checked"));
         if (selectedCheckboxes.length === 0) {
@@ -54,7 +52,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Selecionar todos os fornecedores
     selectAllRiskCheckbox.addEventListener("change", function () {
         const isChecked = selectAllRiskCheckbox.checked;
         document.querySelectorAll(".supplier-risk-checkbox").forEach(checkbox => {
@@ -147,7 +144,6 @@ document.addEventListener("DOMContentLoaded", function () {
         dataTableContainer.appendChild(supplierSection);
     }
 
-    // Função para gerar o relatório
     function generateReport() {
         const selectedSuppliers = Array.from(document.querySelectorAll(".supplier-risk-checkbox:checked")).map(checkbox => checkbox.value);
         const daysEstimate = parseInt(riskDaysInput.value, 10) || 0;

@@ -67,17 +67,20 @@ def generate_rupture_report():
 
     try:
         data = request.get_json()
-        supplier = data.get('supplier', 'Fornecedor_Desconhecido')
+        suppliers = data.get('suppliers', [])
         days_estimate = data.get('days_estimate')
         table_data = data.get('table_data')
-        file_format = data.get('file_format', 'pdf') 
+        file_format = data.get('file_format', 'pdf')
+
+        if not suppliers or not days_estimate or not table_data:
+            return jsonify({"error": "Todos os campos são obrigatórios!"}), 400
 
         if file_format == 'pdf':
-            file_path = generate_pdf_rupture(supplier, days_estimate, table_data)
+            file_path = generate_pdf_rupture(suppliers, days_estimate, table_data)
         elif file_format == 'excel':
-            file_path = generate_excel(supplier, days_estimate, table_data)
+            file_path = generate_excel(suppliers, days_estimate, table_data)
         elif file_format == 'csv':
-            file_path = generate_csv(supplier, table_data)
+            file_path = generate_csv(suppliers, table_data)
         else:
             return jsonify({"error": "Formato de arquivo inválido"}), 400
 
