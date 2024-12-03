@@ -1,92 +1,96 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const suppliersSelect = document.getElementById('suppliers');
+    const suppliersDropdown = document.getElementById('suppliers-dropdown');
+    const suppliersCheckboxesContainer = document.getElementById('suppliers-checkboxes');
+    const selectAllCheckbox = document.getElementById('select-all');
     const daysSelect = document.getElementById('count-days');
     const calculateButton = document.getElementById('calculate-button');
     const dataTableBody = document.getElementById('data-table');
     const reportSection = document.getElementById('report-generation-section');
     const generateReportButton = document.getElementById('generate-report-button');
-    const chooseFileSelect = document.getElementById('choose-file');
+    const fileFormatSelect = document.getElementById('choose-file');
+    let itemsData = [];
 
     function getSuppliers() {
         fetch(`${CONFIG.API_BASE_URL}/api/suppliers`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error("Erro ao buscar fornecedores.");
+                return response.json();
+            })
             .then(suppliers => {
-                suppliersSelect.innerHTML = '<option value="" disabled selected>Selecione um fornecedor</option>';
                 suppliers.forEach(supplier => {
-                    const option = document.createElement('option');
-                    option.value = supplier.nome;
-                    option.textContent = supplier.nome;
-                    suppliersSelect.appendChild(option);
+                    const checkboxDiv = document.createElement('div');
+                    checkboxDiv.classList.add('dropdown-item');
+                    checkboxDiv.innerHTML = `
+                        <input type="checkbox" id="supplier-${supplier.nome}" class="supplier-checkbox form-check-input me-2" value="${supplier.nome}">
+                        <label for="supplier-${supplier.nome}" class="form-check-label">${supplier.nome}</label>
+                    `;
+                    suppliersCheckboxesContainer.appendChild(checkboxDiv);
                 });
             })
-            .catch(error => console.error('Erro ao carregar fornecedores:', error));
+            .catch(error => console.error("Erro ao carregar fornecedores:", error));
     }
 
-    function getStagnantItems(supplierName, days) {
-        const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?supplier_name=${encodeURIComponent(supplierName)}&days=${days}`;
+    function updateDropdownLabel() {
+        const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
+        suppliersDropdown.textContent = selectedSuppliers.length > 0 ? selectedSuppliers.join(", ") : "Selecionar Fornecedores";
+    }
 
+    selectAllCheckbox.addEventListener('change', function () {
+        const isChecked = selectAllCheckbox.checked;
+        document.querySelectorAll('.supplier-checkbox').forEach(checkbox => (checkbox.checked = isChecked));
+        updateDropdownLabel();
+    });
+
+    suppliersCheckboxesContainer.addEventListener('change', updateDropdownLabel);
+
+    function getStagnantItems(suppliers, days) {
+        const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
+        const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?${suppliersQuery}&days=${days}`;
+
+        dataTableBody.innerHTML = '';
         fetch(url)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor.');
-                }
+                if (!response.ok) throw new Error("Erro ao buscar itens parados.");
                 return response.json();
             })
             .then(data => {
                 if (data.length === 0) {
-                    alert(`${supplierName} não possui itens parados há mais de ${days} dias.`);
-                } else {
-                    populateTable(data);
-                    reportSection.style.display = 'block';
+                    alert("Nenhum item parado encontrado.");
+                    return;
                 }
+
+                itemsData = data;
+                data.forEach(({ descricao, quantidade_estoque, ultima_venda, curva }) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="text-center">${descricao}</td>
+                        <td class="text-center">${quantidade_estoque}</td>
+                        <td class="text-center">${ultima_venda}</td>
+                        <td class="text-center">${curva}</td>
+                    `;
+                    dataTableBody.appendChild(row);
+                });
+
+                reportSection.style.display = 'block';
             })
-            .catch(error => {
-                console.error('Erro ao carregar itens parados:', error);
-                alert('Erro ao carregar dados. Contate o suporte.');
-            });
-    }
-
-    function populateTable(items) {
-        dataTableBody.innerHTML = '';
-
-        items.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="text-center">${item.descricao}</td>
-                <td class="text-center">${item.quantidade_estoque}</td>
-                <td class="text-center">${item.ultima_venda}</td>
-                <td class="text-center">${item.curva}</td>
-            `;
-            dataTableBody.appendChild(row);
-        });
+            .catch(error => console.error("Erro ao carregar itens parados:", error));
     }
 
     function generateReport() {
-        const supplierName = suppliersSelect.value;
-        const fileFormat = chooseFileSelect.value;
+        const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
         const days = daysSelect.value;
-    
-        if (!supplierName || !fileFormat || !days) {
-            alert('Preencha todos os campos antes de gerar o relatório.');
+        const fileFormat = fileFormatSelect.value;
+
+        if (!selectedSuppliers.length || !days || !fileFormat) {
+            alert("Preencha todos os campos para gerar o relatório.");
             return;
         }
-    
-        const tableData = Array.from(dataTableBody.querySelectorAll('tr')).map(row => {
-            return Array.from(row.querySelectorAll('td')).map(cell => cell.textContent.trim());
-        });
-    
-        const payload = {
-            supplier_name: supplierName,
-            table_data: tableData,
-            file_format: fileFormat,
-            days: days
-        };
-    
+
+        const payload = { suppliers: selectedSuppliers, days, table_data: itemsData, file_format: fileFormat };
+
         fetch(`${CONFIG.API_BASE_URL}/api/generate-stagnant-report`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
             .then(response => response.json())
@@ -94,26 +98,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.file_path) {
                     window.open(data.file_path, '_blank');
                 } else {
-                    alert('Erro ao gerar o relatório.');
+                    alert("Erro ao gerar o relatório.");
                 }
             })
-            .catch(error => {
-                console.error('Erro ao gerar relatório:', error);
-                alert('Erro ao gerar relatório. Verifique o console para mais detalhes.');
-            });
+            .catch(error => console.error("Erro ao gerar relatório:", error));
     }
-    
 
     calculateButton.addEventListener('click', function () {
-        const supplierName = suppliersSelect.value;
+        const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
         const days = daysSelect.value;
 
-        if (!supplierName || !days) {
-            alert('Por favor, selecione um fornecedor e uma quantidade de dias.');
+        if (!selectedSuppliers.length || !days) {
+            alert("Selecione pelo menos um fornecedor e insira um número de dias.");
             return;
         }
 
-        getStagnantItems(supplierName, days);
+        getStagnantItems(selectedSuppliers, days);
     });
 
     generateReportButton.addEventListener('click', generateReport);
