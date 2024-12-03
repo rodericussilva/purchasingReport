@@ -127,7 +127,7 @@ def generate_stagnant_report():
 
     try:
         data = request.get_json()
-        supplier = data.get('supplier_name', 'Fornecedor_Desconhecido')
+        suppliers = data.get('suppliers', [])
         table_data = data.get('table_data', [])
         file_format = data.get('file_format', 'pdf')
         days = data.get('days', 120)
@@ -136,11 +136,11 @@ def generate_stagnant_report():
             return jsonify({"error": "Nenhum dado encontrado para geração do relatório."}), 400
 
         if file_format == 'pdf':
-            file_path = generate_pdf_stagnant(supplier, table_data, days)
+            file_path = generate_pdf_stagnant(suppliers, table_data, days)
         elif file_format == 'excel':
-            file_path = generate_excel(supplier, table_data)
+            file_path = generate_excel(suppliers, table_data)
         elif file_format == 'csv':
-            file_path = generate_csv(supplier, table_data)
+            file_path = generate_csv(suppliers, table_data)
         else:
             return jsonify({"error": "Formato de arquivo inválido"}), 400
 

@@ -345,9 +345,9 @@ def generate_csv(supplier, table_data):
 
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
 
-def generate_pdf_stagnant(supplier, table_data, days):
+def generate_pdf_stagnant(suppliers, table_data, days):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    pdf_path = os.path.join(REPORTS_DIR, f'stagnant_items_{supplier}_{timestamp}.pdf')
+    pdf_path = os.path.join(REPORTS_DIR, f'stagnant_items_{timestamp}.pdf')
 
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR)
@@ -361,10 +361,16 @@ def generate_pdf_stagnant(supplier, table_data, days):
         c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(105, height - 85, "TS DISTRIBUIDORA")
-        c.drawString(300, height - 70, f"Itens Parados a Mais de {days} Dias")  # Adicionar o número de dias
+        c.drawString(300, height - 70, f"Itens Parados a Mais de {days} Dias")
         c.setFont("Helvetica", 10)
-        info_text = f"Fornecedor: {supplier}                                   Relatório gerado em {datetime.now().strftime('%d/%m/%Y')}"
-        c.drawString(60, height - 120, info_text)
+        c.drawString(60, height - 120, f"Relatório gerado em {datetime.now().strftime('%d/%m/%Y')}")
+
+    def draw_supplier_info(c, supplier, table_y):
+        c.setFont("Helvetica", 10)
+        info_text = f"Fornecedor: {supplier}"
+        c.drawString(60, table_y, info_text)
+        c.line(60, table_y - 5, width - 60, table_y - 5)
+        return table_y - 20
 
     def draw_table_header(c, table_y):
         c.setFont("Helvetica-Bold", 8)
@@ -387,35 +393,53 @@ def generate_pdf_stagnant(supplier, table_data, days):
         table_width = sum(col_widths)
         c.line(60, table_y, 60 + table_width, table_y)
 
-    col_widths = [200, 100, 150, 100]
+    col_widths = [270, 150, 200, 100]
     row_height = 20
     max_rows_per_page = 20
+    margin_bottom = 25
 
     draw_header(c)
     table_y = height - 160
-    draw_table_header(c, table_y)
-    table_y -= 25
 
-    rows_on_page = 0
-    c.setFont("Helvetica", 8)
+    for supplier_data in table_data:
+        supplier = supplier_data.get("fornecedor", "Desconhecido")
+        produtos = supplier_data.get("produtos", [])
 
-    for row in table_data:
-        if rows_on_page >= max_rows_per_page:
+        if not isinstance(produtos, list):
+            raise ValueError("A chave 'produtos' deve ser uma lista.")
+
+        if table_y - margin_bottom < 150:
             c.showPage()
             draw_header(c)
             table_y = height - 160
-            draw_table_header(c, table_y)
-            table_y -= 25
-            rows_on_page = 0
 
-        x_position = 60
-        for i, cell in enumerate(row):
-            c.drawString(x_position + 5, table_y - 10, str(cell))
-            x_position += col_widths[i]
+        table_y = draw_supplier_info(c, supplier, table_y)
+        draw_table_header(c, table_y)
+        table_y -= 25
 
-        draw_row_line(c, table_y)
-        table_y -= row_height
-        rows_on_page += 1
+        rows_on_page = 0
+        c.setFont("Helvetica", 8)
+
+        for product in produtos:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                c.showPage()
+                draw_header(c)
+                table_y = height - 160
+                table_y = draw_supplier_info(c, supplier, table_y)
+                draw_table_header(c, table_y)
+                table_y -= 25
+                rows_on_page = 0
+
+            x_position = 60
+            for i, col in enumerate(["descricao", "quantidade_estoque", "ultima_venda", "curva"]):
+                c.drawString(x_position + 5, table_y - 10, str(product.get(col, 'N/A')))
+                x_position += col_widths[i]
+
+            draw_row_line(c, table_y)
+            table_y -= row_height
+            rows_on_page += 1
+
+        table_y -= 15
 
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
