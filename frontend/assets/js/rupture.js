@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const title = document.createElement("h5");
         title.textContent = `Fornecedor: ${supplierName}`;
-        title.classList.add("mt-3", "text-danger");
+        title.classList.add("mt-3", "text-secundary");
 
         const tableWrapper = document.createElement("div");
         tableWrapper.classList.add("table-responsive");

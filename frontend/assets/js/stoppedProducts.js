@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectAllCheckbox = document.getElementById('select-all');
     const daysSelect = document.getElementById('count-days');
     const calculateButton = document.getElementById('calculate-button');
-    const dataTableBody = document.getElementById('data-table');
+    const dataTableContainer = document.getElementById('data-table');
     const reportSection = document.getElementById('report-generation-section');
     const generateReportButton = document.getElementById('generate-report-button');
     const fileFormatSelect = document.getElementById('choose-file');
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
         const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?${suppliersQuery}&days=${days}`;
 
-        dataTableBody.innerHTML = '';
+        dataTableContainer.innerHTML = '';
         fetch(url)
             .then(response => {
                 if (!response.ok) throw new Error("Erro ao buscar itens parados.");
@@ -61,21 +61,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 itemsData = data;
                 data.forEach(supplierData => {
-                    supplierData.produtos.forEach(({ descricao, quantidade_estoque, ultima_venda, curva }) => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td class="text-center">${descricao}</td>
-                            <td class="text-center">${quantidade_estoque}</td>
-                            <td class="text-center">${ultima_venda}</td>
-                            <td class="text-center">${curva}</td>
-                        `;
-                        dataTableBody.appendChild(row);
-                    });
+                    createTableForSupplier(supplierData.fornecedor, supplierData.produtos);
                 });
 
                 reportSection.style.display = 'block';
             })
             .catch(error => console.error("Erro ao carregar itens parados:", error));
+    }
+
+    function createTableForSupplier(supplierName, products) {
+        const supplierSection = document.createElement("div");
+        supplierSection.classList.add("mb-4");
+
+        const title = document.createElement("h5");
+        title.textContent = `Fornecedor: ${supplierName}`;
+        title.classList.add("mt-3", "text-secundary");
+
+        const tableWrapper = document.createElement("div");
+        tableWrapper.classList.add("table-responsive");
+
+        const table = document.createElement("table");
+        table.classList.add("table", "table-striped", "table-bordered");
+
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th class="text-center">Descrição</th>
+                    <th class="text-center">Quantidade em Estoque</th>
+                    <th class="text-center">Data da Última Venda</th>
+                    <th class="text-center">Curva</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${products.map(product => `
+                    <tr>
+                        <td class="text-center">${product.descricao}</td>
+                        <td class="text-center">${product.quantidade_estoque}</td>
+                        <td class="text-center">${product.ultima_venda}</td>
+                        <td class="text-center">${product.curva}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        `;
+
+        tableWrapper.appendChild(table);
+        supplierSection.appendChild(title);
+        supplierSection.appendChild(tableWrapper);
+        dataTableContainer.appendChild(supplierSection);
     }
 
     function generateReport() {
