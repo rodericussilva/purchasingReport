@@ -63,23 +63,48 @@
             <div class="card">
               <div class="card-body">
                 <h5 class="card-title">Risco de Ruptura de Estoque</h5>
+
                 <p class="text-light">* Esse relatório leva em consideração as vendas diárias nos últimos 90 dias.</p>
+
                 <div class="row mb-3">
+
                   <div class="col-md-4">
-                    <label for="suppliers" class="form-label text-light mt-2">Fornecedores</label>
-                    <select id="suppliers" class="form-select">
-                        <option value="" disabled selected>Selecione um fornecedor</option>
-                    </select>
+
+                    <label for="suppliers-risk" class="form-label text-light mt-2">Fornecedores</label>
+
+                    <div class="dropdown">
+
+                      <button class="btn btn-success dropdown-toggloe w-100" type="button" id="suppliers-risk-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Selecionar Fornecedores
+                      </button>
+
+                      <div class="dropdown-menu w-100" aria-labelledby="suppliers-risk-dropdown">
+                        <div class="dropdown-item">
+
+                          <input type="checkbox" id="select-all-risk" class="form-check-input me-2">
+
+                          <label for="select-all-risk" class="form-check-label">Selecionar todos</label>
+
+                        </div>
+
+                        <div id="suppliers-risk-checkboxes">
+                          <!-- suppliers dynamically rendered here -->
+                        </div>
+
+                      </div>
+
+                    </div>
+
                   </div> <br>
                   
                   <div class="col-md-4">
-                    <label for="days-estemate" class="form-label text-light mt-2">Dias estimados</label>
-                    <input type="number" id="days-estemate" class="form-control" placeholder="Digite os dias">
+                    <label for="days-risk" class="form-label text-light mt-2">Dias estimados</label>
+                    <input type="number" id="riskDays" class="form-control" placeholder="Digite os dias">
                   </div>  <br>
 
                   <div class="col-md-4 d-grid">
-                    <label for="calculate-rupture" class="form-label text-light black-text mt-2">Enviar</label>
-                    <button id="calculate-button" class="btn btn-success">Calcular Risco de Ruptura</button>
+                    <label for="calculate-risk" class="form-label text-light black-text mt-2">Enviar</label>
+                    <button id="calculate-risk-button" class="btn btn-danger">Calcular Risco de Ruptura</button>
                   </div>
 
                 </div>
@@ -87,25 +112,10 @@
                 <div class="table-responsive">
                   <table class="table table-striped table-bordered">
                     <thead>
-                        <tr>
-                            <th class="col-md-3 text-center">Descrição</th>
-                            <th class="text-center">Est. Disponível</th>
-                            <th class="text-center">Estoque Min.</th>
-                            <th class="text-center">Em trânsito</th>
-                            <th class="text-center">Média diária</th>
-                            <th class="text-center">Curva</th>
-                        </tr>
-                        <tr>
-                            <th class="text-center"></th>
-                            <th class="text-center"></th>
-                            <th class="text-center"></th>
-                            <th class="text-center"></th>
-                            <th class="text-center"></th>
-                            <th class="text-center"></th>
-                        </tr>
+                      <!-- infos dynamically rendered here -->
                     </thead>
-                    <tbody id="data-table">
-                        <!-- dynamic table values -->
+                    <tbody id="risk-data-table-container">
+                      <!-- dynamic table values -->
                     </tbody>
                   </table>
                 </div>
@@ -130,7 +140,7 @@
           </select>
 
           <div class="col-md-12 d-grid">
-            <button id="generate-report-button" class="btn btn-success mt-2">Gerar Relatório</button>
+            <button id="generate-report-button" class="btn btn-warning mt-2">Gerar Relatório</button>
           </div>
 
         </div>
@@ -150,7 +160,6 @@
 
     <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
-    <script src="/frontend/assets/vendor/apexcharts/apexcharts.min.js"></script>
     <script src="/frontend/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/frontend/assets/vendor/php-email-form/validate.js"></script>
 

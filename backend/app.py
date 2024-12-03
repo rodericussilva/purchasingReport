@@ -57,30 +57,24 @@ def get_total_suggestions():
 
 @app.route('/api/rupture-risk', methods=['GET'])
 def rupture_risk():
-    supplier_name = request.args.get('supplier_name')
-    days_estimate = int(request.args.get('days_estimate'))
+    supplier_names = request.args.getlist('supplier_name[]')
+    days_estimate = request.args.get('days_estimate')
 
-    if not supplier_name or not days_estimate:
-        return jsonify({"error": "Parâmetros 'supplier_name' e 'days_estimate' são obrigatórios!"}), 400
+    if not supplier_names or not days_estimate:
+        return jsonify({"error": "Parâmetros 'supplier_name[]' e 'days_estimate' são obrigatórios!"}), 400
     
     try:
-        products = fetch_products_and_calculate_rupture(supplier_name, days_estimate)
+        days_estimate = int(days_estimate)
+        products_by_supplier = fetch_products_and_calculate_rupture(supplier_names, days_estimate)
         
-        if not products:
-            return jsonify({"message": "Nenhum produto encontrado para o fornecedor especificado!"}), 404
+        if not products_by_supplier:
+            return jsonify({"message": "Nenhum produto encontrado com risco de ruptura para os fornecedores especificados!"}), 404
 
         response_data = []
-        for product in products:
+        for fornecedor, products in products_by_supplier.items():
             response_data.append({
-                "descricao": product['descricao'],
-                "estoque_disponivel": product['estoque_disponivel'],
-                "estoque_fisico": product['estoque_fisico'],
-                "estoque_transito": product['estoque_transito'],
-                "estoque_minimo": product['estoque_minimo'],
-                "media_diaria_venda": product['media_diaria_venda'],
-                "previsao_vendas": product['previsao_vendas'],
-                "risco_ruptura": product['risco_ruptura'],
-                "curva": product['curva']
+                "fornecedor": fornecedor,
+                "produtos": products
             })
 
         return jsonify(response_data)

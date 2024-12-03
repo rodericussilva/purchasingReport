@@ -1001,11 +1001,16 @@ def fetch_total_suggestions():
     connection.close()
     return total_suggestions
 
-def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
+def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
+    if not supplier_names:
+        raise ValueError("Nenhum fornecedor fornecido.")
+
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    query = """
+    placeholders = ', '.join(['?'] * len(supplier_names))
+
+    query = f"""
     SELECT 
         f.Fantasia,
         p.Descricao,
@@ -1040,9 +1045,9 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
     JOIN 
         PRXES pr ON pr.Cod_Produt = p.Codigo
     JOIN 
-    	V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
+        V_PRSLD_DET det ON p.Codigo = det.Cod_Produt
     WHERE
-        f.Fantasia = ?
+        f.Fantasia IN ({placeholders})
         AND f.Fantasia NOT IN (
             '3M', 
             'CANNONE', 
@@ -1331,43 +1336,41 @@ def fetch_products_and_calculate_rupture(supplier_name, days_estimate):
         p.Descricao ASC;
     """
     
-    cursor.execute(query, (supplier_name,))
+    cursor.execute(query, supplier_names)
     result = cursor.fetchall()
-    
-    products = []
-    
+
+    products_by_supplier = {}
+
     for row in result:
         descricao = row.Descricao
         estoque_disponivel = row.Qtd_SldCalPra
         estoque_fisico = row.Qtd_Fisico
         estoque_transito = row.Qtd_Transi
-        media_diaria_venda = row.media_diaria_venda
         estoque_minimo = row.Qtd_EstMin
-        curva = row.Sta_AbcUniVenFab
+        media_diaria_venda = row.media_diaria_venda
 
-        if estoque_transito > 0:
-            continue
-        
         previsao_vendas = media_diaria_venda * days_estimate
         risco_ruptura = estoque_disponivel - previsao_vendas
-        
+
+        if row.Fantasia not in products_by_supplier:
+            products_by_supplier[row.Fantasia] = []
+
         if risco_ruptura < 0:
-            products.append({
+            products_by_supplier[row.Fantasia].append({
                 'descricao': descricao,
-                'estoque_fisico': estoque_fisico,
                 'estoque_disponivel': estoque_disponivel,
+                'estoque_fisico': estoque_fisico,
                 'estoque_transito': estoque_transito,
                 'estoque_minimo': estoque_minimo,
-                'curva': curva,
                 'media_diaria_venda': media_diaria_venda,
                 'previsao_vendas': previsao_vendas,
                 'risco_ruptura': risco_ruptura
             })
-    
+
     cursor.close()
     connection.close()
-    
-    return products
+
+    return products_by_supplier
 
 def fetch_total_rupture_risk(days_estimate):
     connection = get_db_connection()
