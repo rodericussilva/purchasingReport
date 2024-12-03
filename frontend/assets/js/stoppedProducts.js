@@ -60,15 +60,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 itemsData = data;
-                data.forEach(({ descricao, quantidade_estoque, ultima_venda, curva }) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="text-center">${descricao}</td>
-                        <td class="text-center">${quantidade_estoque}</td>
-                        <td class="text-center">${ultima_venda}</td>
-                        <td class="text-center">${curva}</td>
-                    `;
-                    dataTableBody.appendChild(row);
+                data.forEach(supplierData => {
+                    supplierData.produtos.forEach(({ descricao, quantidade_estoque, ultima_venda, curva }) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="text-center">${descricao}</td>
+                            <td class="text-center">${quantidade_estoque}</td>
+                            <td class="text-center">${ultima_venda}</td>
+                            <td class="text-center">${curva}</td>
+                        `;
+                        dataTableBody.appendChild(row);
+                    });
                 });
 
                 reportSection.style.display = 'block';
