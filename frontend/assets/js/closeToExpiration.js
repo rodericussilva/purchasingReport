@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const payload = { suppliers: selectedSuppliers, months, table_data: itemsData, file_format: fileFormat };
 
-        fetch(`${CONFIG.API_BASE_URL}/api/generate-expiring-report`, {
+        fetch(`${CONFIG.API_BASE_URL}/api/generate-expiration-report`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

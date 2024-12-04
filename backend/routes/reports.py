@@ -94,7 +94,7 @@ def generate_rupture_report():
     finally:
         lock.release()
 
-@report.route('/generate_expiration_report', methods=['POST'])
+@report.route('/generate-expiration-report', methods=['POST'])
 def generate_expiration_report():
     try:
         data = request.get_json()
