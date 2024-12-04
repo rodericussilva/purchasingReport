@@ -649,7 +649,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
         formatted_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
         formatted_avg = int(row.Media_Fat)
 
-        media_faturamento_diario = formatted_avg / 30 if formatted_avg > 0 else 0.0000000001
+        media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else 0.0000000001
         cobertura = int(formatted_avg / media_faturamento_diario)
 
         dias_suprimento_total = replacement_days + supply_days

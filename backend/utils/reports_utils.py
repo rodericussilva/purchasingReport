@@ -253,9 +253,9 @@ def generate_pdf_rupture(suppliers, days_estimate, table_data):
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
 
-def generate_pdf_expiration(supplier, table_data, months):
+def generate_pdf_expiration(supplier_data_list, months):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    pdf_path = os.path.join(REPORTS_DIR, f'expiration_report_{supplier}_{timestamp}.pdf')
+    pdf_path = os.path.join(REPORTS_DIR, f'expiration_report_{timestamp}.pdf')
 
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR)
@@ -263,87 +263,97 @@ def generate_pdf_expiration(supplier, table_data, months):
     c = canvas.Canvas(pdf_path, pagesize=landscape(A4))
     width, height = landscape(A4)
 
-    def draw_header(c):
+    margin_bottom = 50
+    margin_top = 50
+    margin_left = 60
+    margin_right = 60
+    row_height = 15
+
+    def draw_header():
         logo_path = "static/logo-removebg-preview.png"
         logo_width, logo_height = 40, 40
-        c.drawImage(logo_path, 60, height - 100, width=logo_width, height=logo_height)
+        c.drawImage(logo_path, margin_left, height - margin_top - 40, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(110, height - 85, "TS DISTRIBUIDORA")
-        c.drawString(300, height - 70, f"Relatório de Itens Próximos ao Vencimento ({months} meses)")
+        c.drawString(margin_left + 45, height - margin_top - 35, "TS DISTRIBUIDORA")
+        c.drawString(margin_left + 180, height - margin_top - 10, f"Relatório de Itens Próximos ao Vencimento ({months} meses)")
+
+    def draw_supplier_info(supplier, table_y):
         c.setFont("Helvetica", 10)
         info_text = f"Fornecedor: {supplier}                                   Data de Geração: {datetime.now().strftime('%d/%m/%Y')}"
-        c.drawString(60, height - 120, info_text)
+        c.drawString(margin_left, table_y, info_text)
+        c.line(margin_left, table_y - 5, width - margin_right, table_y - 5)
+        return table_y - 20
 
-    def draw_table_header(c, table_y):
+    def draw_table_header(table_y):
         c.setFont("Helvetica-Bold", 7)
         columns = ["Descrição", "Quantidade em Estoque", "Data do Vencimento", "Curva"]
-        x_position = 60
+        x_position = margin_left
         for i, column in enumerate(columns):
             c.drawString(x_position + 5, table_y - 10, column)
             x_position += col_widths[i]
         
         table_width = sum(col_widths)
-        c.rect(60, table_y - 20, table_width, 20, stroke=1, fill=0)
+        c.rect(margin_left, table_y - 20, table_width, 20, stroke=1, fill=0)
 
-        x_position = 60
+        x_position = margin_left
         for width in col_widths:
             c.line(x_position, table_y, x_position, table_y - 20)
             x_position += width
 
-    def draw_row_line(c, table_y):
-        table_width = sum(col_widths)
-        c.line(60, table_y, 60 + table_width, table_y)
+    def draw_table_content(table_data, table_y):
+        rows_on_page = 0
 
-    col_widths = [240, 120, 120, 100]
-    row_height = 15
+        for row in table_data:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                table_y = new_page()
+                draw_table_header(table_y)
+                rows_on_page = 0
+
+            x_position = margin_left
+            for i, cell in enumerate(row):
+                c.setFont("Helvetica", 8)
+                c.drawString(x_position + 5, table_y - 10, str(cell))
+                x_position += col_widths[i]
+
+            draw_row_line(table_y)
+            table_y -= row_height
+            rows_on_page += 1
+
+        return table_y
+
+    def draw_row_line(table_y):
+        table_width = sum(col_widths)
+        c.line(margin_left, table_y, margin_left + table_width, table_y)
+
+    def new_page():
+        c.showPage()
+        draw_header()
+        return height - margin_top - 80
+
+    col_widths = [300, 150, 150, 120]
     max_rows_per_page = 20
 
-    draw_header(c)
-    table_y = height - 150
-    draw_table_header(c, table_y)
-    table_y -= 25
+    draw_header()
+    table_y = height - margin_top - 80
 
-    rows_on_page = 0
-    c.setFont("Helvetica", 7)
+    for supplier_data in supplier_data_list:
+        supplier = supplier_data.get("supplier_name", "Desconhecido")
+        table_data = supplier_data.get("table_data", [])
 
-    for row in table_data:
-        if rows_on_page >= max_rows_per_page:
-            c.showPage()
-            draw_header(c)
-            table_y = height - 150
-            draw_table_header(c, table_y)
-            table_y -= 25
-            rows_on_page = 0
+        if not isinstance(table_data, list):
+            raise ValueError("A chave 'table_data' deve ser uma lista.")
 
-        x_position = 60
-        for i, cell in enumerate(row):
-            c.drawString(x_position + 5, table_y - 10, str(cell))
-            x_position += col_widths[i]
+        if table_y - margin_bottom < 150:
+            table_y = new_page()
 
-        draw_row_line(c, table_y)
-        table_y -= row_height
-        rows_on_page += 1
+        table_y = draw_supplier_info(supplier, table_y)
+        draw_table_header(table_y)
+        table_y -= 25
+
+        table_y = draw_table_content(table_data, table_y)
 
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"
-
-def generate_csv(supplier, table_data):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = os.path.join(REPORTS_DIR, f'expiration_report_{supplier}_{timestamp}.csv')
-
-    if not os.path.exists(REPORTS_DIR):
-        os.makedirs(REPORTS_DIR)
-
-    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-
-        headers = ["Descrição", "Quantidade em Estoque", "Data do Vencimento", "Curva"]
-        writer.writerow(headers)
-
-        for row in table_data:
-            writer.writerow(row)
-
-    return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(csv_path)}"
 
 def generate_pdf_stagnant(suppliers, table_data, days):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

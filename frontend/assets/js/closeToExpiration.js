@@ -114,14 +114,27 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
         const months = monthSelect.value;
         const fileFormat = fileFormatSelect.value;
-
+    
         if (!selectedSuppliers.length || !months || !fileFormat) {
             alert("Preencha todos os campos para gerar o relatório.");
             return;
         }
-
-        const payload = { suppliers: selectedSuppliers, months, table_data: itemsData, file_format: fileFormat };
-
+    
+        const supplierDataList = selectedSuppliers.map(supplier => {
+            const supplierData = itemsData.find(data => data.fornecedor === supplier);
+            return {
+                supplier_name: supplier,
+                table_data: supplierData ? supplierData.produtos.map(product => [
+                    product.descricao,
+                    product.quantidade_estoque,
+                    product.data_vencimento,
+                    product.curva
+                ]) : []
+            };
+        });
+    
+        const payload = { supplier_data_list: supplierDataList, months, file_format: fileFormat };
+    
         fetch(`${CONFIG.API_BASE_URL}/api/generate-expiration-report`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

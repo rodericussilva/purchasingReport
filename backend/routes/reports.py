@@ -96,19 +96,24 @@ def generate_rupture_report():
 
 @report.route('/generate-expiration-report', methods=['POST'])
 def generate_expiration_report():
+    if not lock.acquire(blocking=False):
+        return jsonify({"error": "Um relatório já está sendo gerado"}), 429
+    
     try:
         data = request.get_json()
-        supplier = data.get('supplier_name', 'Fornecedor_Desconhecido')
-        table_data = data.get('table_data', [])
+        supplier_data_list = data.get('supplier_data_list', [])
         file_format = data.get('file_format', 'pdf')
         months = data.get('months', 12)
 
+        if not supplier_data_list or not months:
+            return jsonify({"error": "Todos os campos são obrigatórios!"}), 400
+
         if file_format == 'pdf':
-            file_path = generate_pdf_expiration(supplier, table_data, months)
+            file_path = generate_pdf_expiration(supplier_data_list, months)
         elif file_format == 'excel':
-            file_path = generate_excel(supplier, table_data)
+            file_path = generate_excel(supplier_data_list)
         elif file_format == 'csv':
-            file_path = generate_csv(supplier, table_data)
+            file_path = generate_csv(supplier_data_list)
         else:
             return jsonify({"error": "Formato de arquivo inválido"}), 400
 
@@ -119,6 +124,8 @@ def generate_expiration_report():
     except Exception as e:
         print(f"Erro ao gerar relatório: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        lock.release()
     
 @report.route('/generate-stagnant-report', methods=['POST'])
 def generate_stagnant_report():
