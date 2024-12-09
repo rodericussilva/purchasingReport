@@ -5,9 +5,12 @@ def fetch_suppliers():
     connection = get_db_connection()
     cursor = connection.cursor()
     query = """
-        SELECT DISTINCT Fantasia AS nome
-        FROM vw_dados_compras
-        WHERE Fantasia NOT IN (
+        SELECT DISTINCT
+            f.Fantasia AS nome
+        FROM V_PRCPL AS vpr
+        JOIN PRODU AS p ON p.Codigo = vpr.Codigo
+        JOIN FABRI AS f ON p.Cod_Fabricante = f.Codigo
+        WHERE f.Fantasia NOT IN (
             '3M', 
             'CANNONE', 
             'CALUETE E PINHO LTDA', 
@@ -282,9 +285,12 @@ def fetch_suppliers():
     """
     cursor.execute(query)
     result = cursor.fetchall()
+    
     suppliers = [{'nome': row.nome} for row in result]
+    
     cursor.close()
     connection.close()
+    
     return suppliers
 
 def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
@@ -650,7 +656,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
         formatted_avg = int(row.Media_Fat)
 
         media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else 0.0000000001
-        cobertura = int(formatted_avg / media_faturamento_diario)
+        cobertura = int(row.Qtd_SldCalPra / media_faturamento_diario) if media_faturamento_diario > 0 else 0.000000001
 
         dias_suprimento_total = replacement_days + supply_days
         sugestao_compra = int((media_faturamento_diario * dias_suprimento_total) - row.Qtd_SldCalPra)
@@ -1769,7 +1775,7 @@ def fetch_items_close_to_expiration(supplier_names, months):
         f.Fantasia,
         p.Codigo,
         p.Descricao,
-        pr.Qtd_Dispon,
+        det.Qtd_SldCalPra,
         pr.Sta_AbcUniVenFab,
         pr.Dat_PrxVctLot,
         MAX(ba.Dat_VctLot) AS Dat_VctLot_Mais_Recente
@@ -1786,7 +1792,7 @@ def fetch_items_close_to_expiration(supplier_names, months):
     WHERE 
         f.Fantasia IN ({placeholders})
     GROUP BY 
-        f.Fantasia, p.Codigo, p.Descricao, pr.Qtd_Dispon, pr.Sta_AbcUniVenFab, pr.Dat_PrxVctLot
+        f.Fantasia, p.Codigo, p.Descricao, pr.Qtd_Dispon, pr.Sta_AbcUniVenFab, det.Qtd_SldCalPra, pr.Dat_PrxVctLot
     HAVING 
         MAX(ba.Dat_VctLot) <= DATEADD(MONTH, ?, GETDATE())
     ORDER BY 
@@ -1799,6 +1805,10 @@ def fetch_items_close_to_expiration(supplier_names, months):
     items_by_supplier = {}
 
     for row in results:
+
+        if row.Qtd_SldCalPra == 0:
+            continue
+        
         data_vencimento = row.Dat_PrxVctLot or row.Dat_VctLot_Mais_Recente
         if data_vencimento:
             data_vencimento = data_vencimento.strftime('%d-%m-%Y') if isinstance(data_vencimento, datetime) else data_vencimento
@@ -1806,7 +1816,7 @@ def fetch_items_close_to_expiration(supplier_names, months):
         item = {
             "codigo": row.Codigo,
             "descricao": row.Descricao,
-            "quantidade_estoque": row.Qtd_Dispon,
+            "quantidade_estoque": row.Qtd_SldCalPra,
             "data_vencimento": data_vencimento,
             "curva": row.Sta_AbcUniVenFab,
         }
@@ -2434,6 +2444,10 @@ def fetch_items_stopped_days(supplier_names, days):
 
     stagnant_items_by_supplier = {}
     for row in results:
+        
+        if row.Quantidade_Estoque == 0:
+            continue
+        
         ultima_venda = row.Ultima_Venda.strftime('%d-%m-%Y') if row.Ultima_Venda else 'Sem registro'
         item = {
             "descricao": row.Descricao,
