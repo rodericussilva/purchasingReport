@@ -86,18 +86,22 @@ document.addEventListener('DOMContentLoaded', function () {
         table.innerHTML = `
             <thead>
                 <tr>
+                    <th class="text-center">Código</th>
                     <th class="text-center">Descrição</th>
                     <th class="text-center">Quantidade em Estoque</th>
                     <th class="text-center">Data de Validade</th>
+                    <th class="text-center">Lote</th>
                     <th class="text-center">Curva</th>
                 </tr>
             </thead>
             <tbody>
                 ${products.map(product => `
                     <tr>
+                        <td class="text-center">${product.codigo}</td>
                         <td class="text-center">${product.descricao}</td>
                         <td class="text-center">${product.quantidade_estoque}</td>
                         <td class="text-center">${product.data_vencimento}</td>
+                        <td class="text-center">${product.lote}</td>
                         <td class="text-center">${product.curva}</td>
                     </tr>
                 `).join("")}

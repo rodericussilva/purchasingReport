@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_suppliers, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days
+from models import fetch_suppliers, fetch_products_by_suppliers, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days, fetch_sumary_suggestions
 from routes.reports import report
 from dotenv import load_dotenv
 
@@ -158,6 +158,25 @@ def get_stagnant_items():
 
     except Exception as e:
         print(f"Erro ao buscar itens parados: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/sales-summary-suggestions', methods=['GET'])
+def get_sales_summary():
+    supplier_names = request.args.getlist('supplier_name[]')
+
+    if not supplier_names:
+        return jsonify({"error": "Os nomes dos fornecedores são obrigatórios!"}), 400
+
+    try:
+        sales_summary = fetch_sumary_suggestions(supplier_names)
+
+        if not sales_summary:
+            return jsonify({"message": "Nenhum dado de vendas encontrado para os fornecedores especificados!"}), 404
+
+        return jsonify(sales_summary), 200
+
+    except Exception as e:
+        print(f"Erro ao buscar dados de vendas: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

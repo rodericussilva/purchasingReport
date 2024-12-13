@@ -116,6 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {
         table.innerHTML = `
             <thead>
                 <tr>
+                    <th class="text-center">Código</th>
                     <th class="text-center">Descrição</th>
                     <th class="text-center">Est. Disponível</th>
                     <th class="text-center">Estoque Min.</th>
@@ -127,6 +128,7 @@ document.addEventListener("DOMContentLoaded", function () {
             <tbody>
                 ${products.map(product => `
                     <tr>
+                        <td class="text-center">${product.codigo}</td>
                         <td class="text-center">${product.descricao}</td>
                         <td class="text-center">${product.estoque_disponivel}</td>
                         <td class="text-center">${product.estoque_minimo}</td>
