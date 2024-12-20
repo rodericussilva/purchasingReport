@@ -383,17 +383,20 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
         fornecedor = row.fornecedor
         total_stock = row.Qtd_Dispon + row.C_QtdPulmao
 
-        media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else Decimal('0.000000001')
-        cobertura = total_stock / media_faturamento_diario if media_faturamento_diario > 0 else 0.000000001
+        demanda_media_diaria = row.Media_Fat / 30 if formatted_avg > 0 else Decimal('0.000000001')
 
-        dias_suprimento_total = replacement_days + supply_days
-        sugestao = (media_faturamento_diario * dias_suprimento_total) - total_stock
+        dias_cobertura = replacement_days + supply_days
+
+        sugestao = (demanda_media_diaria * dias_cobertura) - total_stock
         if total_stock == 0 and sugestao == 0 and row.Qtd_EstMin > 0:
             sugestao = row.Qtd_EstMin
-        cobertura = round(cobertura, 2)
         sugestao = round(sugestao, 2)
 
+        cobertura = total_stock / demanda_media_diaria if demanda_media_diaria > 0 else 0.000000001
+        cobertura = round(cobertura)
+
         sugestao_compra[row.Codigo] = sugestao
+
 
         if fornecedor not in supplier_totals:
             supplier_totals[fornecedor] = {
