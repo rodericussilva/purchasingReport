@@ -1,5 +1,6 @@
 from database import get_db_connection
 from datetime import datetime
+from decimal import Decimal
 
 def fetch_suppliers():
     connection = get_db_connection()
@@ -301,10 +302,11 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
 
     query = f"""
         SELECT
-            f.Fantasia,
+            f.Fantasia AS fornecedor,
             p.Descricao,
             p.Codigo,
             pr.Sta_AbcUniVenFab,
+            pr.Prc_Venda,
             ROUND(nfe.Prc_UniFat, 2) AS Prc_Compra,
             COALESCE(pul.C_QtdPulmao, 0) AS C_QtdPulmao,
             COALESCE(pr.Qtd_Dispon, 0) AS Qtd_Dispon,
@@ -335,10 +337,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
                 END, 3) AS Des_VenMes3,
             ROUND((SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
             SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
-            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0))) / 3.0, 2) AS Media_Fat,
-            ROUND((SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
-            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
-            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0))) / 90.0, 2) AS Media_Diaria_Trimestre
+            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0))) / 3.0, 2) AS Media_Fat
         FROM 
             fVENDAS v
         JOIN 
@@ -346,49 +345,110 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
         JOIN
             FABRI f ON p.Cod_Fabricante = f.Codigo
         JOIN
-            NFEIT nfe ON nfe.Cod_Produto = p.Codigo
-        JOIN
             PRXES pr ON p.Codigo = pr.Cod_Produt
+        JOIN (
+            SELECT 
+                Cod_Produto, 
+                Prc_UniFat,
+                ROW_NUMBER() OVER (PARTITION BY Cod_Produto ORDER BY Dat_Movimento DESC) AS rn
+            FROM NFEIT
+        ) nfe ON nfe.Cod_Produto = p.Codigo AND nfe.rn = 1
         LEFT JOIN 
-			V_PULMAO AS pul ON v.IDPRODUTO = pul.Cod_Produto
-        WHERE 
-            f.Fantasia IN ({placeholders})
+            V_PULMAO AS pul ON v.IDPRODUTO = pul.Cod_Produto
+        WHERE f.Fantasia IN ({placeholders})
         GROUP BY 
             f.Fantasia,
             p.Descricao,
             p.Codigo,
             pr.Sta_AbcUniVenFab,
+            pr.Prc_Venda,
             nfe.Prc_UniFat,
             pul.C_QtdPulmao,
             pr.Qtd_Dispon,
             pr.Qtd_EstMin
         ORDER BY 
-            p.Descricao ASC
+            p.Descricao ASC;
     """
     cursor.execute(query, supplier_names)
     result = cursor.fetchall()
 
     suppliers = {}
+    sugestao_compra = {}
+    supplier_totals = {}
 
     for row in result:
-        formatted_price = f"R$ {float(row.Prc_Compra):,.2f}".replace(".", ",")
+        formatted_buy_price = f"R$ {float(row.Prc_Compra):,.2f}".replace(".", ",")
+        formatted_sale_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
         formatted_avg = int(row.Media_Fat)
+        fornecedor = row.fornecedor
         total_stock = row.Qtd_Dispon + row.C_QtdPulmao
 
-        media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else 0.0000000001
+        media_faturamento_diario = row.Media_Fat / 30 if formatted_avg > 0 else Decimal('0.000000001')
         cobertura = total_stock / media_faturamento_diario if media_faturamento_diario > 0 else 0.000000001
 
         dias_suprimento_total = replacement_days + supply_days
-        sugestao_compra = (media_faturamento_diario * dias_suprimento_total) - total_stock
-        if total_stock == 0 and sugestao_compra == 0 and row.Qtd_EstMin > 0:
-            sugestao_compra = row.Qtd_EstMin
-        
+        sugestao = (media_faturamento_diario * dias_suprimento_total) - total_stock
+        if total_stock == 0 and sugestao == 0 and row.Qtd_EstMin > 0:
+            sugestao = row.Qtd_EstMin
         cobertura = round(cobertura, 2)
-        sugestao_compra = round(sugestao_compra, 2)
-        
+        sugestao = round(sugestao, 2)
+
+        sugestao_compra[row.Codigo] = sugestao
+
+        if fornecedor not in supplier_totals:
+            supplier_totals[fornecedor] = {
+                "total_vendas_mes0": Decimal(0),
+                "total_vendas_mes1": Decimal(0),
+                "total_vendas_mes2": Decimal(0),
+                "total_vendas_mes3": Decimal(0),
+                "total_disponivel": Decimal(0),
+                "total_preco_compra": Decimal(0),
+                "total_preco_compra_mes0": Decimal(0),
+                "total_preco_compra_mes1": Decimal(0),
+                "total_preco_compra_mes2": Decimal(0),
+                "total_preco_compra_mes3": Decimal(0),
+                "total_preco_venda": Decimal(0),
+                "total_preco_venda_mes0": Decimal(0),
+                "total_preco_venda_mes1": Decimal(0),
+                "total_preco_venda_mes2": Decimal(0),
+                "total_preco_venda_mes3": Decimal(0),
+                "total_unidades_sugeridas": int(0),
+                "total_sugestao_compra_valor": Decimal(0),
+                "total_sugestao_venda_valor": Decimal(0)
+            }
+
+        preco_unitario = Decimal(row.Prc_Compra or "0")
+        preco_venda = Decimal(row.Prc_Venda or "0")
+        quantidade_disponivel = int(row.Qtd_Dispon or "0")
+
+        supplier_totals[fornecedor]["total_vendas_mes0"] += row.Qtd_FatMes0
+        supplier_totals[fornecedor]["total_vendas_mes1"] += row.Qtd_FatMes1
+        supplier_totals[fornecedor]["total_vendas_mes2"] += row.Qtd_FatMes2
+        supplier_totals[fornecedor]["total_vendas_mes3"] += row.Qtd_FatMes3
+        supplier_totals[fornecedor]["total_disponivel"] += quantidade_disponivel
+        supplier_totals[fornecedor]["total_preco_compra"] += preco_unitario * quantidade_disponivel
+        supplier_totals[fornecedor]["total_preco_compra_mes0"] += preco_unitario * Decimal(row.Qtd_FatMes0)
+        supplier_totals[fornecedor]["total_preco_compra_mes1"] += preco_unitario * Decimal(row.Qtd_FatMes1)
+        supplier_totals[fornecedor]["total_preco_compra_mes2"] += preco_unitario * Decimal(row.Qtd_FatMes2)
+        supplier_totals[fornecedor]["total_preco_compra_mes3"] += preco_unitario * Decimal(row.Qtd_FatMes3)
+        supplier_totals[fornecedor]["total_preco_venda"] += preco_venda * (Decimal(row.Qtd_FatMes0) + Decimal(row.Qtd_FatMes1) + Decimal(row.Qtd_FatMes2) + Decimal(row.Qtd_FatMes3))
+        supplier_totals[fornecedor]["total_preco_venda_mes0"] += preco_venda * Decimal(row.Qtd_FatMes0)
+        supplier_totals[fornecedor]["total_preco_venda_mes1"] += preco_venda * Decimal(row.Qtd_FatMes1)
+        supplier_totals[fornecedor]["total_preco_venda_mes2"] += preco_venda * Decimal(row.Qtd_FatMes2)
+        supplier_totals[fornecedor]["total_preco_venda_mes3"] += preco_venda * Decimal(row.Qtd_FatMes3)
+
+        if isinstance(sugestao_compra, dict) and row.Codigo in sugestao_compra:
+            sugestao = sugestao_compra[row.Codigo]
+            if sugestao > 0:
+                supplier_totals[fornecedor]["total_unidades_sugeridas"] += int(sugestao)
+                supplier_totals[fornecedor]["total_sugestao_compra_valor"] += sugestao * preco_unitario
+                supplier_totals[fornecedor]["total_sugestao_venda_valor"] += sugestao * preco_venda
+
         product = {
             'codigo': row.Codigo,
+            "fornecedor": fornecedor,
             'descricao': row.Descricao,
+            "preco_unitario": formatted_buy_price,
             'unidades_faturadas_mes0': row.Qtd_FatMes0,
             'unidades_faturadas_mes1': row.Qtd_FatMes1,
             'unidades_faturadas_mes2': row.Qtd_FatMes2,
@@ -397,10 +457,18 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             'estoque_minimo': row.Qtd_EstMin,
             'estoque_disponivel': row.Qtd_Dispon,
             'transito': row.C_QtdPulmao or 0,
-            'sugestao_compra': sugestao_compra,
-            'valor_compra': formatted_price,
+            'sugestao_compra': sugestao,
+            'valor_compra': formatted_buy_price,
+            'valor_venda': formatted_sale_price,
             'curva': row.Sta_AbcUniVenFab,
             'cobertura': cobertura,
+            "total_faturado_mes0": round(float(row.Qtd_FatMes0), 2),
+            "total_faturado_mes1": round(float(row.Qtd_FatMes1), 2),
+            "total_faturado_mes2": round(float(row.Qtd_FatMes2), 2),
+            "total_faturado_mes3": round(float(row.Qtd_FatMes3), 2),
+            "soma_total": round(float(row.Qtd_FatMes0 + row.Qtd_FatMes1 + row.Qtd_FatMes2 + row.Qtd_FatMes3), 2),
+            "media_faturada_mensal": round((float(row.Qtd_FatMes0 + row.Qtd_FatMes1 + row.Qtd_FatMes2 + row.Qtd_FatMes3)) / 4, 2),
+            "total_disponivel": round(float(row.Qtd_Dispon), 2),
             'mes_labels': {
                 'mes0': row.Des_VenMes0,
                 'mes1': row.Des_VenMes1,
@@ -409,16 +477,37 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             }
         }
 
-        if row.Fantasia not in suppliers: 
-            suppliers[row.Fantasia] = []
+        if row.fornecedor not in suppliers: 
+            suppliers[row.fornecedor] = []
 
-        if not any(prod['codigo'] == product['codigo'] for prod in suppliers[row.Fantasia]):
-            suppliers[row.Fantasia].append(product)
+        if not any(prod['codigo'] == product['codigo'] for prod in suppliers[row.fornecedor]):
+            suppliers[row.fornecedor].append(product)
+    
+    for fornecedor, totals in supplier_totals.items():
+        totals["media_vendas_mensal"] = round(
+            (totals["total_vendas_mes0"] + totals["total_vendas_mes1"] + totals["total_vendas_mes2"] + totals["total_vendas_mes3"]) / 4, 2
+        )
+        totals["media_compras_mensal"] = round(
+            (totals["total_preco_compra_mes0"] + totals["total_preco_compra_mes1"] + totals["total_preco_compra_mes2"] + totals["total_preco_compra_mes3"]) / 4, 2
+        )
+        totals["total_preco_compra"] = round(totals["total_preco_compra"], 2)
+        totals["total_preco_compra_mes0"] = round(totals["total_preco_compra_mes0"], 2)
+        totals["total_preco_compra_mes1"] = round(totals["total_preco_compra_mes1"], 2)
+        totals["total_preco_compra_mes2"] = round(totals["total_preco_compra_mes2"], 2)
+        totals["total_preco_compra_mes3"] = round(totals["total_preco_compra_mes3"], 2)
+        totals["total_preco_venda"] = round(totals["total_preco_venda"], 2)
+        totals["total_preco_venda_mes0"] = round(totals["total_preco_venda_mes0"], 2)
+        totals["total_preco_venda_mes1"] = round(totals["total_preco_venda_mes1"], 2)
+        totals["total_preco_venda_mes2"] = round(totals["total_preco_venda_mes2"], 2)
+        totals["total_preco_venda_mes3"] = round(totals["total_preco_venda_mes3"], 2)
 
     cursor.close()
     connection.close()
     
-    return [{"fornecedor": key, "produtos": value} for key, value in suppliers.items()]
+    return {
+        "suppliers": [{"fornecedor": key, "produtos": value} for key, value in suppliers.items()],
+        "totals": supplier_totals
+    }
 
 def fetch_total_suggestions():
     connection = get_db_connection()
@@ -876,107 +965,3 @@ def fetch_items_stopped_days(supplier_names, days):
     connection.close()
 
     return stagnant_items_by_supplier
-
-def fetch_sumary_suggestions(supplier_names):
-    if not supplier_names:
-        raise ValueError("Nenhum fornecedor fornecido.")
-
-    connection = get_db_connection()
-    cursor = connection.cursor()
-
-    placeholders = ', '.join(['?'] * len(supplier_names))
-
-    query = f"""
-    SELECT
-        p.Codigo,
-        f.Fantasia AS fornecedor,
-        nfe.Prc_UniFat,
-        SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) AS total_faturado_mes0,
-        LEFT(CASE MONTH(GETDATE())
-            WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
-            WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
-            WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
-            END, 3) AS Des_VenMes0,
-        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS total_faturado_mes1,
-        LEFT(CASE MONTH(DATEADD(MONTH, -1, GETDATE()))
-            WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
-            WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
-            WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
-            END, 3) AS Des_VenMes1,
-        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS total_faturado_mes2,
-        LEFT(CASE MONTH(DATEADD(MONTH, -2, GETDATE()))
-            WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
-            WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
-            WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
-            END, 3) AS Des_VenMes2,
-        SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) AS total_faturado_mes3,
-        LEFT(CASE MONTH(DATEADD(MONTH, -3, GETDATE()))
-            WHEN 1 THEN 'JAN' WHEN 2 THEN 'FEV' WHEN 3 THEN 'MAR' WHEN 4 THEN 'ABR'
-            WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
-            WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
-            END, 3) AS Des_VenMes3,
-        (
-            SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
-            SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
-            SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
-            SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
-        ) AS Soma_Total,
-        ROUND(
-            (
-                SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
-                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
-                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
-                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
-            ) / 4.0, 2
-        ) AS media_faturada_mensal,
-        ROUND(SUM(pr.Qtd_Dispon), 2) AS total_disponivel
-    FROM
-        fVENDAS v
-    JOIN PRODU p ON v.IDPRODUTO = p.Codigo
-    JOIN FABRI f ON p.Cod_Fabricante = f.Codigo
-    JOIN PRXES pr ON p.Codigo = pr.Cod_Produt
-    JOIN (
-        SELECT 
-            Cod_Produto, 
-            Prc_UniFat,
-            ROW_NUMBER() OVER (PARTITION BY Cod_Produto ORDER BY Dat_Movimento DESC) AS rn
-        FROM NFEIT
-    ) nfe ON nfe.Cod_Produto = p.Codigo AND nfe.rn = 1
-    WHERE f.Fantasia IN ({placeholders})
-    GROUP BY
-        p.Codigo,
-        f.Fantasia,
-        nfe.Prc_UniFat,
-        pr.Qtd_Dispon
-    ORDER BY
-        fornecedor ASC;
-    """
-
-    cursor.execute(query, *supplier_names)
-    results = cursor.fetchall()
-
-    sales_data = []
-    for row in results:
-        sales_data.append({
-            "codigo": row.Codigo,
-            "fornecedor": row.fornecedor,
-            "preco_unitario": row.Prc_UniFat,
-            "total_faturado_mes0": row.total_faturado_mes0,
-            "total_faturado_mes1": row.total_faturado_mes1,
-            "total_faturado_mes2": row.total_faturado_mes2,
-            "total_faturado_mes3": row.total_faturado_mes3,
-            "soma_total": row.Soma_Total,
-            "media_faturada_mensal": row.media_faturada_mensal,
-            "total_disponivel": row.total_disponivel,
-            'mes_labels': {
-                'mes0': row.Des_VenMes0,
-                'mes1': row.Des_VenMes1,
-                'mes2': row.Des_VenMes2,
-                'mes3': row.Des_VenMes3
-            }
-        })
-
-    cursor.close()
-    connection.close()
-
-    return sales_data

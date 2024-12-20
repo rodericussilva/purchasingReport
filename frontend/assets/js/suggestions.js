@@ -74,9 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function getProductsBySuppliers(suppliers, replacementDays, supplyDays) {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
         const url = `${CONFIG.API_BASE_URL}/api/products?${suppliersQuery}&replacement_days=${replacementDays}&supply_days=${supplyDays}`;
-
+    
         dataTableContainer.innerHTML = '';
-
+    
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -85,17 +85,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
-                if (data.length === 0) {
+                if (data.suppliers.length === 0) {
                     alert('Nenhum produto encontrado para os fornecedores selecionados.');
                     return;
                 }
-
+    
                 productsData = data;
-
-                data.forEach(({ fornecedor, produtos }) => {
-                    createTableForSupplier(fornecedor, produtos);
+    
+                data.suppliers.forEach(({ fornecedor, produtos }) => {
+                    createTableForSupplier(fornecedor, produtos, data.totals[fornecedor]);
                 });
-
+    
                 reportSection.style.display = 'block';
             })
             .catch(error => {
@@ -103,18 +103,21 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-    function createTableForSupplier(supplierName, products) {
+    function createTableForSupplier(supplierName, products, summaryData) {
         const supplierSection = document.createElement('div');
         supplierSection.classList.add('mb-4');
+    
         const title = document.createElement('h5');
         title.textContent = `Fornecedor: ${supplierName}`;
-        title.classList.add('mt-3', 'text-secundary');
+        title.classList.add('mt-3', 'text-dark');
+    
         const tableWrapper = document.createElement('div');
         tableWrapper.classList.add('table-responsive');
+    
         const table = document.createElement('table');
         table.classList.add('table', 'table-striped', 'table-bordered');
         const mesLabels = products[0].mes_labels;
-
+    
         table.innerHTML = `
             <thead>
                 <tr>
@@ -171,133 +174,99 @@ document.addEventListener('DOMContentLoaded', function () {
         tableWrapper.appendChild(table);
         supplierSection.appendChild(title);
         supplierSection.appendChild(tableWrapper);
-        dataTableContainer.appendChild(supplierSection);
-    }
-
-    function getSalesSummary(suppliers) {
-        const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
-        const url = `${CONFIG.API_BASE_URL}/api/sales-summary-suggestions?${suppliersQuery}`;
-
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao buscar dados de vendas. Verifique os parâmetros e tente novamente.');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (!data || data.length === 0) {
-                    alert('Nenhum dado de vendas encontrado para os fornecedores selecionados.');
-                    return;
-                }
-
-                createSummaryTable(data);
-            })
-            .catch(error => {
-                console.error('Erro ao carregar dados de vendas:', error);
-            });
-    }
-
-    function createSummaryTable(data) {
-        const mesLabels = data[0].mes_labels;
-
-        summaryTable.innerHTML = '';
-
-        const existingTitle = cardBody.querySelector('.card-title.text-center');
-        if (existingTitle) {
-            existingTitle.remove();
-        }
-
-        const title = document.createElement('h5');
-        title.classList.add('card-title', 'text-center');
-        title.textContent = 'Resumo';
-        cardBody.insertBefore(title, cardBody.firstChild);
-
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        const headers = ['-', mesLabels.mes3, mesLabels.mes2, mesLabels.mes1, mesLabels.mes0, 'Média Mês', 'Total Disponível', 'Sugestão'];
-        headers.forEach(headerText => {
+    
+        // Adding the summary section
+        const summarySection = document.createElement('div');
+        summarySection.classList.add('mb-4');
+    
+        const summaryTitle = document.createElement('h5');
+        summaryTitle.classList.add('card-title', 'text-center', 'text-dark');
+        summaryTitle.textContent = `Resumo para ${supplierName}`;
+        summarySection.appendChild(summaryTitle);
+    
+        const summaryTable = document.createElement('table');
+        summaryTable.classList.add('table', 'table-striped', 'table-bordered');
+    
+        const summaryThead = document.createElement('thead');
+        const summaryHeaderRow = document.createElement('tr');
+        const summaryHeaders = ['-', mesLabels.mes0, mesLabels.mes1, mesLabels.mes2, mesLabels.mes3, 'Média Mês', 'Total Disponível', 'Sugestão'];
+        summaryHeaders.forEach(headerText => {
             const th = document.createElement('th');
             th.classList.add('text-center');
             th.textContent = headerText;
-            headerRow.appendChild(th);
+            summaryHeaderRow.appendChild(th);
         });
-        thead.appendChild(headerRow);
-        summaryTable.appendChild(thead);
-
-        const tbody = document.createElement('tbody');
-        summaryTable.appendChild(tbody);
-
-        let totalMes0 = 0, totalMes1 = 0, totalMes2 = 0, totalMes3 = 0;
-        let totalMedia = 0, totalDisponivel = 0, totalSugestao = 0;
-
-        data.forEach(sales_data => {
-            totalMes0 += sales_data.total_faturado_mes0;
-            totalMes1 += sales_data.total_faturado_mes1;
-            totalMes2 += sales_data.total_faturado_mes2;
-            totalMes3 += sales_data.total_faturado_mes3;
-            totalMedia += sales_data.media_faturada_mensal;
-            totalDisponivel += sales_data.total_disponivel;
-            totalSugestao += sales_data.sugestao_compra || 0;
-        });
-
+        summaryThead.appendChild(summaryHeaderRow);
+        summaryTable.appendChild(summaryThead);
+    
+        const summaryTbody = document.createElement('tbody');
+        summaryTable.appendChild(summaryTbody);
+    
+        const formatCurrency = (value) => {
+            return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+    
         const unitsRow = document.createElement('tr');
         unitsRow.innerHTML = `
             <th>Unidades</th>
-            <td>${totalMes0}</td>
-            <td>${totalMes1}</td>
-            <td>${totalMes2}</td>
-            <td>${totalMes3}</td>
-            <td>${(totalMedia / data.length).toFixed(2)}</td>
-            <td>${totalDisponivel}</td>
-            <td>${totalSugestao}</td>
+            <td>${summaryData.total_vendas_mes0 || 0}</td> 
+            <td>${summaryData.total_vendas_mes1 || 0}</td>
+            <td>${summaryData.total_vendas_mes2 || 0}</td>
+            <td>${summaryData.total_vendas_mes3 || 0}</td>
+            <td>${summaryData.media_vendas_mensal || 0}</td>
+            <td>${summaryData.total_disponivel || 0}</td>
+            <td>${summaryData.total_unidades_sugeridas || 0}</td>
         `;
-        tbody.appendChild(unitsRow);
-
+        summaryTbody.appendChild(unitsRow);
+    
         const compraRow = document.createElement('tr');
         compraRow.innerHTML = `
             <th>Total Preço de Compra</th>
-            <td>${(totalMes0 * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${(totalMes1 * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${(totalMes2 * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${(totalMes3 * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${((totalMedia / data.length) * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${(totalDisponivel * data[0].preco_unitario).toFixed(2)}</td>
-            <td>${(totalSugestao * data[0].preco_unitario).toFixed(2)}</td>
+            <td>${formatCurrency(summaryData.total_preco_compra_mes0 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_compra_mes1 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_compra_mes2 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_compra_mes3 || 0)}</td>
+            <td>${formatCurrency(summaryData.media_compras_mensal || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_compra || 0)}</td>
+            <td>${formatCurrency(summaryData.total_sugestao_compra_valor || 0)}</td>
         `;
-        tbody.appendChild(compraRow);
-
+        summaryTbody.appendChild(compraRow);
+    
         const vendaRow = document.createElement('tr');
         vendaRow.innerHTML = `
             <th>Total Preço de Venda</th>
-            <td>${(totalMes0 * data[0].preco_venda).toFixed(2)}</td>
-            <td>${(totalMes1 * data[0].preco_venda).toFixed(2)}</td>
-            <td>${(totalMes2 * data[0].preco_venda).toFixed(2)}</td>
-            <td>${(totalMes3 * data[0].preco_venda).toFixed(2)}</td>
-            <td>${((totalMedia / data.length) * data[0].preco_venda).toFixed(2)}</td>
-            <td>${(totalDisponivel * data[0].preco_venda).toFixed(2)}</td>
-            <td>${(totalSugestao * data[0].preco_venda).toFixed(2)}</td>
+            <td>${formatCurrency(summaryData.total_preco_venda_mes0 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_venda_mes1 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_venda_mes2 || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_venda_mes3 || 0)}</td>
+            <td>${formatCurrency(summaryData.media_vendas_mensal || 0)}</td>
+            <td>${formatCurrency(summaryData.total_preco_venda || 0)}</td>
+            <td>${formatCurrency(summaryData.total_sugestao_venda_valor || 0)}</td>
         `;
-        tbody.appendChild(vendaRow);
+        summaryTbody.appendChild(vendaRow);
+    
+        summarySection.appendChild(summaryTable);
+        supplierSection.appendChild(summarySection);
+    
+        dataTableContainer.appendChild(supplierSection);
     }
 
     calculateButton.addEventListener('click', function () {
         const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
         const replacementDays = parseInt(replacementDaysInput.value, 10) || 0;
         const supplyDays = parseInt(supplyDaysInput.value, 10) || 0;
-
+    
         if (selectedSuppliers.length === 0) {
             alert('Por favor, selecione pelo menos um fornecedor.');
             return;
         }
-
+    
         if (replacementDays <= 0 || supplyDays <= 0) {
             alert('Por favor, insira valores válidos para dias de reposição e dias de suprimento.');
             return;
         }
-
+    
         getProductsBySuppliers(selectedSuppliers, replacementDays, supplyDays);
-        getSalesSummary(selectedSuppliers);
     });
 
     generateReportButton.addEventListener('click', function () {
