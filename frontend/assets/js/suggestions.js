@@ -296,23 +296,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const products = [];
             supplierSection.querySelectorAll('tbody tr').forEach(row => {
                 const productData = {
-                    descricao: row.cells[0]?.textContent || '',
-                    cobertura: row.cells[1]?.textContent || '',
-                    unidades_faturadas_mes3: row.cells[2]?.textContent || '',
-                    unidades_faturadas_mes2: row.cells[3]?.textContent || '',
-                    unidades_faturadas_mes1: row.cells[4]?.textContent || '',
-                    unidades_faturadas_mes0: row.cells[5]?.textContent || '',
-                    media_faturada: row.cells[6]?.textContent || '',
-                    estoque_disponivel: row.cells[7]?.textContent || '',
-                    estoque_minimo: row.cells[8]?.textContent || '',
-                    sugestao_compra: row.cells[9]?.textContent || '',
-                    valor_venda: row.cells[10]?.textContent || '',
-                    curva: row.cells[11]?.textContent || '',
+                    codigo: row.cells[0]?.textContent || '',
+                    descricao: row.cells[1]?.textContent || '',
+                    cobertura: row.cells[2]?.textContent || '',
+                    unidades_faturadas_mes3: row.cells[3]?.textContent || '',
+                    unidades_faturadas_mes2: row.cells[4]?.textContent || '',
+                    unidades_faturadas_mes1: row.cells[5]?.textContent || '',
+                    unidades_faturadas_mes0: row.cells[6]?.textContent || '',
+                    media_faturada: row.cells[7]?.textContent || '',
+                    estoque_disponivel: row.cells[8]?.textContent || '',
+                    estoque_minimo: row.cells[9]?.textContent || '',
+                    transito: row.cells[10]?.textContent || '',
+                    sugestao_compra: row.cells[11]?.textContent || '',
+                    valor_compra: row.cells[12]?.textContent || '',
+                    curva: row.cells[13]?.textContent || '',
                     mes_labels: {
-                        mes0: row.cells[2]?.textContent || 'Mês 0',
-                        mes1: row.cells[3]?.textContent || 'Mês 1',
-                        mes2: row.cells[4]?.textContent || 'Mês 2',
-                        mes3: row.cells[5]?.textContent || 'Mês 3',
+                        mes0: row.cells[3]?.textContent || 'Mês 0',
+                        mes1: row.cells[4]?.textContent || 'Mês 1',
+                        mes2: row.cells[5]?.textContent || 'Mês 2',
+                        mes3: row.cells[6]?.textContent || 'Mês 3',
                     }
                 };
                 products.push(productData);

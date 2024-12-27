@@ -183,7 +183,7 @@ def generate_pdf_rupture(suppliers, days_estimate, table_data):
 
     def draw_table_header(c, table_y):
         c.setFont("Helvetica-Bold", 7)
-        columns = ["Descrição", "Estoque Disponível", "Estoque Mínimo", "Em Trânsito", "Média Diária", "Curva"]
+        columns = ["Código", "Descrição", "Estoque Disponível", "Estoque Mínimo", "Em Trânsito", "Média Diária", "Curva"]
         x_position = 70
 
         for i, column in enumerate(columns):
@@ -202,7 +202,7 @@ def generate_pdf_rupture(suppliers, days_estimate, table_data):
         table_width = sum(col_widths)
         c.line(70, table_y, 70 + table_width, table_y)
 
-    col_widths = [200, 100, 100, 100, 100, 80]
+    col_widths = [80, 200, 100, 100, 100, 100, 80]
     row_height = 15
     max_rows_per_page = 25
     margin_bottom = 25
@@ -240,7 +240,7 @@ def generate_pdf_rupture(suppliers, days_estimate, table_data):
                 rows_on_page = 0
 
             x_position = 70
-            for i, col in enumerate(["descricao", "estoque_disponivel", "estoque_minimo", "estoque_transito", "media_diaria_venda", "curva"]):
+            for i, col in enumerate(["codigo", "descricao", "estoque_disponivel", "estoque_minimo", "estoque_transito", "media_diaria_venda", "curva"]):
                 c.drawString(x_position + 5, table_y - 10, str(product.get(col, 'N/A')))
                 x_position += col_widths[i]
 
@@ -286,7 +286,7 @@ def generate_pdf_expiration(supplier_data_list, months):
 
     def draw_table_header(table_y):
         c.setFont("Helvetica-Bold", 7)
-        columns = ["Descrição", "Quantidade em Estoque", "Data do Vencimento", "Curva"]
+        columns = ["Código", "Descrição", "Quantidade em Estoque", "Data do Vencimento", "Lote", "Curva"]
         x_position = margin_left
         for i, column in enumerate(columns):
             c.drawString(x_position + 5, table_y - 10, column)
@@ -330,7 +330,7 @@ def generate_pdf_expiration(supplier_data_list, months):
         draw_header()
         return height - margin_top - 80
 
-    col_widths = [300, 150, 150, 120]
+    col_widths = [80, 250, 100, 100, 100, 120]
     max_rows_per_page = 20
 
     draw_header()
@@ -384,7 +384,7 @@ def generate_pdf_stagnant(suppliers, table_data, days):
 
     def draw_table_header(c, table_y):
         c.setFont("Helvetica-Bold", 8)
-        columns = ["Descrição", "Quantidade em Estoque", "Data da Última Venda", "Curva"]
+        columns = ["Código", "Descrição", "Quantidade em Estoque", "Data da Última Venda", "Última Entrada", "Curva"]
         x_position = 60
 
         for i, column in enumerate(columns):
@@ -403,7 +403,7 @@ def generate_pdf_stagnant(suppliers, table_data, days):
         table_width = sum(col_widths)
         c.line(60, table_y, 60 + table_width, table_y)
 
-    col_widths = [270, 150, 200, 100]
+    col_widths = [50, 270, 100, 110, 110, 80]
     row_height = 20
     max_rows_per_page = 20
     margin_bottom = 25
@@ -441,7 +441,7 @@ def generate_pdf_stagnant(suppliers, table_data, days):
                 rows_on_page = 0
 
             x_position = 60
-            for i, col in enumerate(["descricao", "quantidade_estoque", "ultima_venda", "curva"]):
+            for i, col in enumerate(["codigo", "descricao", "quantidade_estoque", "ultima_venda", "ultima_entrada", "curva"]):
                 c.drawString(x_position + 5, table_y - 10, str(product.get(col, 'N/A')))
                 x_position += col_widths[i]
 

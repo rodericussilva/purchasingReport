@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         dataTableContainer.innerHTML = '';
 
-        // Disable the button and show loading text
         calculateButton.disabled = true;
         calculateButton.textContent = 'Carregando...';
 
@@ -90,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => console.error("Erro ao carregar itens próximos ao vencimento:", error))
             .finally(() => {
-                // Enable the button and reset text
                 calculateButton.disabled = false;
                 calculateButton.textContent = 'Carregar Itens';
             });
@@ -161,9 +159,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return {
                 supplier_name: supplier,
                 table_data: supplierData ? supplierData.produtos.map(product => [
+                    product.codigo,
                     product.descricao,
                     product.quantidade_estoque,
                     product.data_vencimento,
+                    product.lote,
                     product.curva
                 ]) : []
             };
