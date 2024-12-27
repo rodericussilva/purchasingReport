@@ -31,23 +31,45 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateDropdownLabel() {
-        const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
-        suppliersDropdown.textContent = selectedSuppliers.length > 0 ? selectedSuppliers.join(", ") : "Selecionar Fornecedores";
+        const selectedCheckboxes = Array.from(document.querySelectorAll('.supplier-checkbox:checked'));
+        const allCheckboxes = document.querySelectorAll('.supplier-checkbox');
+        
+        if (selectedCheckboxes.length === 0) {
+            suppliersDropdown.textContent = 'Selecionar Fornecedores';
+        } else if (selectedCheckboxes.length === allCheckboxes.length) {
+            suppliersDropdown.textContent = 'Todos os Fornecedores Selecionados';
+        } else {
+            const selectedNames = selectedCheckboxes.map(checkbox => checkbox.value).join(', ');
+            suppliersDropdown.textContent = selectedNames;
+            suppliersDropdown.title = selectedNames; // Tooltip for full names
+        }
     }
 
     selectAllCheckbox.addEventListener('change', function () {
         const isChecked = selectAllCheckbox.checked;
-        document.querySelectorAll('.supplier-checkbox').forEach(checkbox => (checkbox.checked = isChecked));
+        document.querySelectorAll('.supplier-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
         updateDropdownLabel();
     });
 
-    suppliersCheckboxesContainer.addEventListener('change', updateDropdownLabel);
+    suppliersCheckboxesContainer.addEventListener('change', function () {
+        const allCheckboxes = document.querySelectorAll('.supplier-checkbox');
+        const selectedCheckboxes = Array.from(allCheckboxes).filter(checkbox => checkbox.checked);
+        selectAllCheckbox.checked = selectedCheckboxes.length === allCheckboxes.length;
+        updateDropdownLabel();
+    });
 
     function getExpiringItems(suppliers, months) {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
         const url = `${CONFIG.API_BASE_URL}/api/items-close-expiration?${suppliersQuery}&months=${months}`;
 
         dataTableContainer.innerHTML = '';
+
+        // Disable the button and show loading text
+        calculateButton.disabled = true;
+        calculateButton.textContent = 'Carregando...';
+
         fetch(url)
             .then(response => {
                 if (!response.ok) throw new Error("Erro ao buscar itens próximos ao vencimento.");
@@ -66,7 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 reportSection.style.display = 'block';
             })
-            .catch(error => console.error("Erro ao carregar itens próximos ao vencimento:", error));
+            .catch(error => console.error("Erro ao carregar itens próximos ao vencimento:", error))
+            .finally(() => {
+                // Enable the button and reset text
+                calculateButton.disabled = false;
+                calculateButton.textContent = 'Carregar Itens';
+            });
     }
 
     function createTableForSupplier(supplierName, products) {
@@ -83,28 +110,33 @@ document.addEventListener('DOMContentLoaded', function () {
         const table = document.createElement("table");
         table.classList.add("table", "table-striped", "table-bordered");
 
+        const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
         table.innerHTML = `
             <thead>
                 <tr>
                     <th class="text-center">Código</th>
                     <th class="text-center">Descrição</th>
-                    <th class="text-center">Quantidade em Estoque</th>
+                    <th class="text-center">Quantidade</th>
                     <th class="text-center">Data de Validade</th>
                     <th class="text-center">Lote</th>
                     <th class="text-center">Curva</th>
                 </tr>
             </thead>
             <tbody>
-                ${products.map(product => `
-                    <tr>
-                        <td class="text-center">${product.codigo}</td>
-                        <td class="text-center">${product.descricao}</td>
-                        <td class="text-center">${product.quantidade_estoque}</td>
-                        <td class="text-center">${product.data_vencimento}</td>
-                        <td class="text-center">${product.lote}</td>
-                        <td class="text-center">${product.curva}</td>
-                    </tr>
-                `).join("")}
+                ${products.map(product => {
+                    const isExpired = product.data_vencimento < today;
+                    return `
+                        <tr class="${isExpired ? 'expired' : ''}">
+                            <td class="text-center">${product.codigo}</td>
+                            <td class="text-center">${product.descricao}</td>
+                            <td class="text-center">${product.quantidade_estoque}</td>
+                            <td class="text-center">${product.data_vencimento}</td>
+                            <td class="text-center">${product.lote}</td>
+                            <td class="text-center">${product.curva}</td>
+                        </tr>
+                    `;
+                }).join("")}
             </tbody>
         `;
 
@@ -136,7 +168,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 ]) : []
             };
         });
-    
         const payload = { supplier_data_list: supplierDataList, months, file_format: fileFormat };
     
         fetch(`${CONFIG.API_BASE_URL}/api/generate-expiration-report`, {

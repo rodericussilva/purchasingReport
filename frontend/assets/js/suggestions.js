@@ -74,9 +74,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function getProductsBySuppliers(suppliers, replacementDays, supplyDays) {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
         const url = `${CONFIG.API_BASE_URL}/api/products?${suppliersQuery}&replacement_days=${replacementDays}&supply_days=${supplyDays}`;
-    
+        
         dataTableContainer.innerHTML = '';
-    
+
+        // Disable the button and show loading text
+        calculateButton.disabled = true;
+        calculateButton.textContent = 'Carregando...';
+
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -89,35 +93,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert('Nenhum produto encontrado para os fornecedores selecionados.');
                     return;
                 }
-    
+
                 productsData = data;
-    
                 data.suppliers.forEach(({ fornecedor, produtos }) => {
                     createTableForSupplier(fornecedor, produtos, data.totals[fornecedor]);
                 });
-    
+
                 reportSection.style.display = 'block';
             })
             .catch(error => {
                 console.error('Erro ao carregar produtos:', error);
+            })
+            .finally(() => {
+                // Enable the button and reset text
+                calculateButton.disabled = false;
+                calculateButton.textContent = 'Carregar';
             });
     }
 
     function createTableForSupplier(supplierName, products, summaryData) {
         const supplierSection = document.createElement('div');
         supplierSection.classList.add('mb-4');
-    
+
         const title = document.createElement('h5');
         title.textContent = `Fornecedor: ${supplierName}`;
         title.classList.add('mt-3', 'text-dark');
-    
+
         const tableWrapper = document.createElement('div');
         tableWrapper.classList.add('table-responsive');
-    
+
         const table = document.createElement('table');
         table.classList.add('table', 'table-striped', 'table-bordered');
+
         const mesLabels = products[0].mes_labels;
-    
+
         table.innerHTML = `
             <thead>
                 <tr>
@@ -171,22 +180,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 `).join('')}
             </tbody>
         `;
+
         tableWrapper.appendChild(table);
         supplierSection.appendChild(title);
         supplierSection.appendChild(tableWrapper);
-    
+
         // Adding the summary section
         const summarySection = document.createElement('div');
         summarySection.classList.add('mb-4');
-    
+
         const summaryTitle = document.createElement('h5');
         summaryTitle.classList.add('card-title', 'text-center', 'text-dark');
         summaryTitle.textContent = `Resumo para ${supplierName}`;
         summarySection.appendChild(summaryTitle);
-    
+
         const summaryTable = document.createElement('table');
         summaryTable.classList.add('table', 'table-striped', 'table-bordered');
-    
+
         const summaryThead = document.createElement('thead');
         const summaryHeaderRow = document.createElement('tr');
         const summaryHeaders = ['-', mesLabels.mes0, mesLabels.mes1, mesLabels.mes2, mesLabels.mes3, 'Média Mês', 'Total Disponível', 'Sugestão'];
@@ -198,18 +208,18 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         summaryThead.appendChild(summaryHeaderRow);
         summaryTable.appendChild(summaryThead);
-    
+
         const summaryTbody = document.createElement('tbody');
         summaryTable.appendChild(summaryTbody);
-    
+
         const formatCurrency = (value) => {
             return parseFloat(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         };
-    
+
         const unitsRow = document.createElement('tr');
         unitsRow.innerHTML = `
             <th>Unidades</th>
-            <td>${summaryData.total_vendas_mes0 || 0}</td> 
+            <td>${summaryData.total_vendas_mes0 || 0}</td>
             <td>${summaryData.total_vendas_mes1 || 0}</td>
             <td>${summaryData.total_vendas_mes2 || 0}</td>
             <td>${summaryData.total_vendas_mes3 || 0}</td>
@@ -218,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${summaryData.total_unidades_sugeridas || 0}</td>
         `;
         summaryTbody.appendChild(unitsRow);
-    
+
         const compraRow = document.createElement('tr');
         compraRow.innerHTML = `
             <th>Total Preço de Compra</th>
@@ -231,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${formatCurrency(summaryData.total_sugestao_compra_valor || 0)}</td>
         `;
         summaryTbody.appendChild(compraRow);
-    
+
         const vendaRow = document.createElement('tr');
         vendaRow.innerHTML = `
             <th>Total Preço de Venda</th>
@@ -244,10 +254,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <td>${formatCurrency(summaryData.total_sugestao_venda_valor || 0)}</td>
         `;
         summaryTbody.appendChild(vendaRow);
-    
+
         summarySection.appendChild(summaryTable);
         supplierSection.appendChild(summarySection);
-    
         dataTableContainer.appendChild(supplierSection);
     }
 
@@ -255,17 +264,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
         const replacementDays = parseInt(replacementDaysInput.value, 10) || 0;
         const supplyDays = parseInt(supplyDaysInput.value, 10) || 0;
-    
+
         if (selectedSuppliers.length === 0) {
             alert('Por favor, selecione pelo menos um fornecedor.');
             return;
         }
-    
         if (replacementDays <= 0 || supplyDays <= 0) {
             alert('Por favor, insira valores válidos para dias de reposição e dias de suprimento.');
             return;
         }
-    
+
         getProductsBySuppliers(selectedSuppliers, replacementDays, supplyDays);
     });
 

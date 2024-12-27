@@ -73,6 +73,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         dataTableContainer.innerHTML = "";
 
+        // Disable the button and show loading text
+        calculateRiskButton.disabled = true;
+        calculateRiskButton.textContent = 'Carregando...';
+
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -96,6 +100,11 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .catch(error => {
                 console.error("Erro ao buscar dados:", error);
+            })
+            .finally(() => {
+                // Enable the button and reset text
+                calculateRiskButton.disabled = false;
+                calculateRiskButton.textContent = 'Calcular Risco';
             });
     }
 

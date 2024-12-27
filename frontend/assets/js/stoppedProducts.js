@@ -31,23 +31,45 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateDropdownLabel() {
-        const selectedSuppliers = Array.from(document.querySelectorAll('.supplier-checkbox:checked')).map(checkbox => checkbox.value);
-        suppliersDropdown.textContent = selectedSuppliers.length > 0 ? selectedSuppliers.join(", ") : "Selecionar Fornecedores";
+        const selectedCheckboxes = Array.from(document.querySelectorAll('.supplier-checkbox:checked'));
+        const allCheckboxes = document.querySelectorAll('.supplier-checkbox');
+        
+        if (selectedCheckboxes.length === 0) {
+            suppliersDropdown.textContent = 'Selecionar Fornecedores';
+        } else if (selectedCheckboxes.length === allCheckboxes.length) {
+            suppliersDropdown.textContent = 'Todos os Fornecedores Selecionados';
+        } else {
+            const selectedNames = selectedCheckboxes.map(checkbox => checkbox.value).join(', ');
+            suppliersDropdown.textContent = selectedNames;
+            suppliersDropdown.title = selectedNames; // Tooltip for full names
+        }
     }
 
     selectAllCheckbox.addEventListener('change', function () {
         const isChecked = selectAllCheckbox.checked;
-        document.querySelectorAll('.supplier-checkbox').forEach(checkbox => (checkbox.checked = isChecked));
+        document.querySelectorAll('.supplier-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
         updateDropdownLabel();
     });
 
-    suppliersCheckboxesContainer.addEventListener('change', updateDropdownLabel);
+    suppliersCheckboxesContainer.addEventListener('change', function () {
+        const allCheckboxes = document.querySelectorAll('.supplier-checkbox');
+        const selectedCheckboxes = Array.from(allCheckboxes).filter(checkbox => checkbox.checked);
+        selectAllCheckbox.checked = selectedCheckboxes.length === allCheckboxes.length;
+        updateDropdownLabel();
+    });
 
     function getStagnantItems(suppliers, days) {
         const suppliersQuery = suppliers.map(supplier => `supplier_name[]=${encodeURIComponent(supplier)}`).join('&');
         const url = `${CONFIG.API_BASE_URL}/api/stagnant-items?${suppliersQuery}&days=${days}`;
 
         dataTableContainer.innerHTML = '';
+
+        // Disable the button and show loading text
+        calculateButton.disabled = true;
+        calculateButton.textContent = 'Carregando...';
+
         fetch(url)
             .then(response => {
                 if (!response.ok) throw new Error("Erro ao buscar itens parados.");
@@ -66,7 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 reportSection.style.display = 'block';
             })
-            .catch(error => console.error("Erro ao carregar itens parados:", error));
+            .catch(error => console.error("Erro ao carregar itens parados:", error))
+            .finally(() => {
+                // Enable the button and reset text
+                calculateButton.disabled = false;
+                calculateButton.textContent = 'Calcular';
+            });
     }
 
     function createTableForSupplier(supplierName, products) {

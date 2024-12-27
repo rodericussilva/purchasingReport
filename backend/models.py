@@ -12,14 +12,14 @@ def fetch_suppliers():
         JOIN PRODU AS p ON p.Codigo = vpr.Codigo
         JOIN FABRI AS f ON p.Cod_Fabricante = f.Codigo
         WHERE f.Fantasia NOT IN (
-            '3M', 
-            'CANNONE', 
-            'CALUETE E PINHO LTDA', 
-            'CABEPEL', 
-            'C&M FARDAMENTOS', 
-            'C ROLIM', 
-            'C B DIAS ME', 
-            'C & M FARDAMENTOS', 
+            '3M',
+            'CANNONE',
+            'CALUETE E PINHO LTDA',
+            'CABEPEL',
+            'C&M FARDAMENTOS',
+            'C ROLIM',
+            'C B DIAS ME',
+            'C & M FARDAMENTOS',
             'CARMEHIL',
 		    'BISCOITOS BRIEJER CONFEIT',
 		    'AGATEK',
@@ -286,12 +286,12 @@ def fetch_suppliers():
     """
     cursor.execute(query)
     result = cursor.fetchall()
-    
+
     suppliers = [{'nome': row.nome} for row in result]
-    
+
     cursor.close()
     connection.close()
-    
+
     return suppliers
 
 def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
@@ -335,28 +335,35 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
                 WHEN 5 THEN 'MAI' WHEN 6 THEN 'JUN' WHEN 7 THEN 'JUL' WHEN 8 THEN 'AGO'
                 WHEN 9 THEN 'SET' WHEN 10 THEN 'OUT' WHEN 11 THEN 'NOV' WHEN 12 THEN 'DEZ'
                 END, 3) AS Des_VenMes3,
-            ROUND((SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
-            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0)) +
-            SUM(COALESCE(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END, 0))) / 3.0, 2) AS Media_Fat
-        FROM 
+            ROUND(
+                (SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
+                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
+                SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) /
+                NULLIF(
+                    (CASE WHEN SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) > 0 THEN 1 ELSE 0 END +
+                    CASE WHEN SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) > 0 THEN 1 ELSE 0 END +
+                    CASE WHEN SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) > 0 THEN 1 ELSE 0 END +
+                    CASE WHEN SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) > 0 THEN 1 ELSE 0 END), 0), 2) AS Media_Fat
+        FROM
             fVENDAS v
-        JOIN 
+        JOIN
             PRODU p ON v.IDPRODUTO = p.Codigo
         JOIN
             FABRI f ON p.Cod_Fabricante = f.Codigo
         JOIN
             PRXES pr ON p.Codigo = pr.Cod_Produt
         JOIN (
-            SELECT 
-                Cod_Produto, 
+            SELECT
+                Cod_Produto,
                 Prc_UniFat,
                 ROW_NUMBER() OVER (PARTITION BY Cod_Produto ORDER BY Dat_Movimento DESC) AS rn
             FROM NFEIT
         ) nfe ON nfe.Cod_Produto = p.Codigo AND nfe.rn = 1
-        LEFT JOIN 
+        LEFT JOIN
             V_PULMAO AS pul ON v.IDPRODUTO = pul.Cod_Produto
         WHERE f.Fantasia IN ({placeholders})
-        GROUP BY 
+        GROUP BY
             f.Fantasia,
             p.Descricao,
             p.Codigo,
@@ -366,7 +373,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             pul.C_QtdPulmao,
             pr.Qtd_Dispon,
             pr.Qtd_EstMin
-        ORDER BY 
+        ORDER BY
             p.Descricao ASC;
     """
     cursor.execute(query, supplier_names)
@@ -377,26 +384,24 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
     supplier_totals = {}
 
     for row in result:
-        formatted_buy_price = f"R$ {float(row.Prc_Compra):,.2f}".replace(".", ",")
-        formatted_sale_price = f"R$ {float(row.Prc_Venda):,.2f}".replace(".", ",")
-        formatted_avg = int(row.Media_Fat)
+        formatted_buy_price = f"R$ {Decimal(row.Prc_Compra):,.2f}".replace(".", ",")
+        formatted_sale_price = f"R$ {Decimal(row.Prc_Venda):,.2f}".replace(".", ",")
         fornecedor = row.fornecedor
-        total_stock = row.Qtd_Dispon + row.C_QtdPulmao
+        total_stock = Decimal(row.Qtd_Dispon or 0) + Decimal(row.C_QtdPulmao or 0)
 
-        demanda_media_diaria = row.Media_Fat / 30 if formatted_avg > 0 else Decimal('0.000000001')
+        media_fat = Decimal(row.Media_Fat or 0)
+        demanda_media_diaria = media_fat / 30 if media_fat > 0 else Decimal(0)
+        dias_cobertura = total_stock / demanda_media_diaria if demanda_media_diaria > 0 else Decimal(0)
 
-        dias_cobertura = replacement_days + supply_days
+        sugestao = demanda_media_diaria * supply_days
 
-        sugestao = (demanda_media_diaria * dias_cobertura) - total_stock
         if total_stock == 0 and sugestao == 0 and row.Qtd_EstMin > 0:
-            sugestao = row.Qtd_EstMin
+            sugestao = Decimal(row.Qtd_EstMin)
         sugestao = round(sugestao, 2)
 
-        cobertura = total_stock / demanda_media_diaria if demanda_media_diaria > 0 else 0.000000001
-        cobertura = round(cobertura)
+        cobertura = round(dias_cobertura)
 
         sugestao_compra[row.Codigo] = sugestao
-
 
         if fornecedor not in supplier_totals:
             supplier_totals[fornecedor] = {
@@ -422,23 +427,23 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
 
         preco_unitario = Decimal(row.Prc_Compra or "0")
         preco_venda = Decimal(row.Prc_Venda or "0")
-        quantidade_disponivel = int(row.Qtd_Dispon or "0")
+        quantidade_disponivel = Decimal(row.Qtd_Dispon or 0)
 
-        supplier_totals[fornecedor]["total_vendas_mes0"] += row.Qtd_FatMes0
-        supplier_totals[fornecedor]["total_vendas_mes1"] += row.Qtd_FatMes1
-        supplier_totals[fornecedor]["total_vendas_mes2"] += row.Qtd_FatMes2
-        supplier_totals[fornecedor]["total_vendas_mes3"] += row.Qtd_FatMes3
+        supplier_totals[fornecedor]["total_vendas_mes0"] += Decimal(row.Qtd_FatMes0 or 0)
+        supplier_totals[fornecedor]["total_vendas_mes1"] += Decimal(row.Qtd_FatMes1 or 0)
+        supplier_totals[fornecedor]["total_vendas_mes2"] += Decimal(row.Qtd_FatMes2 or 0)
+        supplier_totals[fornecedor]["total_vendas_mes3"] += Decimal(row.Qtd_FatMes3 or 0)
         supplier_totals[fornecedor]["total_disponivel"] += quantidade_disponivel
         supplier_totals[fornecedor]["total_preco_compra"] += preco_unitario * quantidade_disponivel
-        supplier_totals[fornecedor]["total_preco_compra_mes0"] += preco_unitario * Decimal(row.Qtd_FatMes0)
-        supplier_totals[fornecedor]["total_preco_compra_mes1"] += preco_unitario * Decimal(row.Qtd_FatMes1)
-        supplier_totals[fornecedor]["total_preco_compra_mes2"] += preco_unitario * Decimal(row.Qtd_FatMes2)
-        supplier_totals[fornecedor]["total_preco_compra_mes3"] += preco_unitario * Decimal(row.Qtd_FatMes3)
-        supplier_totals[fornecedor]["total_preco_venda"] += preco_venda * (Decimal(row.Qtd_FatMes0) + Decimal(row.Qtd_FatMes1) + Decimal(row.Qtd_FatMes2) + Decimal(row.Qtd_FatMes3))
-        supplier_totals[fornecedor]["total_preco_venda_mes0"] += preco_venda * Decimal(row.Qtd_FatMes0)
-        supplier_totals[fornecedor]["total_preco_venda_mes1"] += preco_venda * Decimal(row.Qtd_FatMes1)
-        supplier_totals[fornecedor]["total_preco_venda_mes2"] += preco_venda * Decimal(row.Qtd_FatMes2)
-        supplier_totals[fornecedor]["total_preco_venda_mes3"] += preco_venda * Decimal(row.Qtd_FatMes3)
+        supplier_totals[fornecedor]["total_preco_compra_mes0"] += preco_unitario * Decimal(row.Qtd_FatMes0 or 0)
+        supplier_totals[fornecedor]["total_preco_compra_mes1"] += preco_unitario * Decimal(row.Qtd_FatMes1 or 0)
+        supplier_totals[fornecedor]["total_preco_compra_mes2"] += preco_unitario * Decimal(row.Qtd_FatMes2 or 0)
+        supplier_totals[fornecedor]["total_preco_compra_mes3"] += preco_unitario * Decimal(row.Qtd_FatMes3 or 0)
+        supplier_totals[fornecedor]["total_preco_venda"] += preco_venda * (Decimal(row.Qtd_FatMes0 or 0) + Decimal(row.Qtd_FatMes1 or 0) + Decimal(row.Qtd_FatMes2 or 0) + Decimal(row.Qtd_FatMes3 or 0))
+        supplier_totals[fornecedor]["total_preco_venda_mes0"] += preco_venda * Decimal(row.Qtd_FatMes0 or 0)
+        supplier_totals[fornecedor]["total_preco_venda_mes1"] += preco_venda * Decimal(row.Qtd_FatMes1 or 0)
+        supplier_totals[fornecedor]["total_preco_venda_mes2"] += preco_venda * Decimal(row.Qtd_FatMes2 or 0)
+        supplier_totals[fornecedor]["total_preco_venda_mes3"] += preco_venda * Decimal(row.Qtd_FatMes3 or 0)
 
         if isinstance(sugestao_compra, dict) and row.Codigo in sugestao_compra:
             sugestao = sugestao_compra[row.Codigo]
@@ -452,26 +457,26 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             "fornecedor": fornecedor,
             'descricao': row.Descricao,
             "preco_unitario": formatted_buy_price,
-            'unidades_faturadas_mes0': row.Qtd_FatMes0,
-            'unidades_faturadas_mes1': row.Qtd_FatMes1,
-            'unidades_faturadas_mes2': row.Qtd_FatMes2,
-            'unidades_faturadas_mes3': row.Qtd_FatMes3,
-            'media_faturada': formatted_avg,
-            'estoque_minimo': row.Qtd_EstMin,
-            'estoque_disponivel': row.Qtd_Dispon,
-            'transito': row.C_QtdPulmao or 0,
+            'unidades_faturadas_mes0': Decimal(row.Qtd_FatMes0 or 0),
+            'unidades_faturadas_mes1': Decimal(row.Qtd_FatMes1 or 0),
+            'unidades_faturadas_mes2': Decimal(row.Qtd_FatMes2 or 0),
+            'unidades_faturadas_mes3': Decimal(row.Qtd_FatMes3 or 0),
+            'media_faturada': Decimal(row.Media_Fat or 0),
+            'estoque_minimo': Decimal(row.Qtd_EstMin or 0),
+            'estoque_disponivel': Decimal(row.Qtd_Dispon or 0),
+            'transito': Decimal(row.C_QtdPulmao or 0),
             'sugestao_compra': sugestao,
             'valor_compra': formatted_buy_price,
             'valor_venda': formatted_sale_price,
             'curva': row.Sta_AbcUniVenFab,
             'cobertura': cobertura,
-            "total_faturado_mes0": round(float(row.Qtd_FatMes0), 2),
-            "total_faturado_mes1": round(float(row.Qtd_FatMes1), 2),
-            "total_faturado_mes2": round(float(row.Qtd_FatMes2), 2),
-            "total_faturado_mes3": round(float(row.Qtd_FatMes3), 2),
-            "soma_total": round(float(row.Qtd_FatMes0 + row.Qtd_FatMes1 + row.Qtd_FatMes2 + row.Qtd_FatMes3), 2),
-            "media_faturada_mensal": round((float(row.Qtd_FatMes0 + row.Qtd_FatMes1 + row.Qtd_FatMes2 + row.Qtd_FatMes3)) / 4, 2),
-            "total_disponivel": round(float(row.Qtd_Dispon), 2),
+            "total_faturado_mes0": round(float(row.Qtd_FatMes0 or 0), 2),
+            "total_faturado_mes1": round(float(row.Qtd_FatMes1 or 0), 2),
+            "total_faturado_mes2": round(float(row.Qtd_FatMes2 or 0), 2),
+            "total_faturado_mes3": round(float(row.Qtd_FatMes3 or 0), 2),
+            "soma_total": round(float((row.Qtd_FatMes0 or 0) + (row.Qtd_FatMes1 or 0) + (row.Qtd_FatMes2 or 0) + (row.Qtd_FatMes3 or 0)), 2),
+            "media_faturada_mensal": round((float((row.Qtd_FatMes0 or 0) + (row.Qtd_FatMes1 or 0) + (row.Qtd_FatMes2 or 0) + (row.Qtd_FatMes3 or 0))) / 4, 2),
+            "total_disponivel": round(float(row.Qtd_Dispon or 0), 2),
             'mes_labels': {
                 'mes0': row.Des_VenMes0,
                 'mes1': row.Des_VenMes1,
@@ -480,16 +485,18 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             }
         }
 
-        if row.fornecedor not in suppliers: 
+        if row.fornecedor not in suppliers:
             suppliers[row.fornecedor] = []
 
         if not any(prod['codigo'] == product['codigo'] for prod in suppliers[row.fornecedor]):
             suppliers[row.fornecedor].append(product)
-    
+
     for fornecedor, totals in supplier_totals.items():
-        totals["media_vendas_mensal"] = round(
-            (totals["total_vendas_mes0"] + totals["total_vendas_mes1"] + totals["total_vendas_mes2"] + totals["total_vendas_mes3"]) / 4, 2
-        )
+        total_vendas = totals["total_vendas_mes0"] + totals["total_vendas_mes1"] + totals["total_vendas_mes2"] + totals["total_vendas_mes3"]
+        meses_com_vendas = sum(1 for x in [totals["total_vendas_mes0"], totals["total_vendas_mes1"], totals["total_vendas_mes2"], totals["total_vendas_mes3"]] if x > 0)
+        media_vendas_mensal = total_vendas / meses_com_vendas if meses_com_vendas > 0 else 0
+
+        totals["media_vendas_mensal"] = round(media_vendas_mensal, 2)
         totals["media_compras_mensal"] = round(
             (totals["total_preco_compra_mes0"] + totals["total_preco_compra_mes1"] + totals["total_preco_compra_mes2"] + totals["total_preco_compra_mes3"]) / 4, 2
         )
@@ -506,7 +513,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
 
     cursor.close()
     connection.close()
-    
+
     return {
         "suppliers": [{"fornecedor": key, "produtos": value} for key, value in suppliers.items()],
         "totals": supplier_totals
@@ -516,19 +523,19 @@ def fetch_total_suggestions():
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    replacement_days = 7  # default value to help with the sum
-    supply_days = 14  # default value to help with the sum
+    replacement_days = 15  # default value to help with the sum
+    supply_days = 45  # default value to help with the sum
     dias_suprimento_total = replacement_days + supply_days
 
     query = f"""
         SELECT COUNT(*) AS total
         FROM (
-            SELECT 
+            SELECT
                 ROUND((SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0, 0) AS media_faturada,
-                
+
                 pr.Qtd_Dispon,
 
                 -- Calcula sugestao_compra com media_faturada calculada dentro do SELECT
@@ -537,7 +544,8 @@ def fetch_total_suggestions():
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
 			    SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)) / 4.0 * {dias_suprimento_total}) - pr.Qtd_Dispon, 2) AS sugestao_compra
 
-            FROM fVENDAS v
+            FROM  V_PRCPL vpr
+            JOIN fVENDAS v ON v.IDPRODUTO = vpr.Codigo
             JOIN PRODU p ON v.IDPRODUTO = p.Codigo
             JOIN FABRI f ON p.Cod_Fabricante = f.Codigo
             JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
@@ -545,7 +553,7 @@ def fetch_total_suggestions():
         ) AS subquery
         WHERE sugestao_compra > 0;
     """
-    
+
     cursor.execute(query)
     result = cursor.fetchall()
     total_suggestions = int(result[0][0]) if result else 0
@@ -564,16 +572,17 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
     placeholders = ', '.join(['?'] * len(supplier_names))
 
     query = f"""
-    SELECT 
+    SELECT
         f.Fantasia,
         p.Descricao,
         p.Codigo,
         pr.Sta_AbcUniVenFab,
         pr.Qtd_Dispon,
+        pr.Qtd_Quaren,
         pr.Qtd_EstMin,
         pul.C_QtdPulmao,
         pr.Qtd_Fisico,
-        
+
         (SUM(CASE WHEN MONTH(v.DATA) = MONTH(GETDATE()) AND YEAR(v.DATA) = YEAR(GETDATE()) THEN v.QUANTIDADE ELSE 0 END) +
         SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -1, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -1, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
         SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -2, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -2, GETDATE())) THEN v.QUANTIDADE ELSE 0 END) +
@@ -586,31 +595,32 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
                     SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
                 ) / 90.0, 2
             ) AS media_diaria_venda  -- Média diária de vendas
-    FROM 
+    FROM
         fVENDAS v
-    JOIN 
+    JOIN
         PRODU p ON v.IDPRODUTO = p.Codigo
-    JOIN 
+    JOIN
         FABRI f ON p.Cod_Fabricante = f.Codigo
-    JOIN 
+    JOIN
         PRXES pr ON pr.Cod_Produt = p.Codigo
-    LEFT JOIN 
+    LEFT JOIN
         V_PULMAO pul ON p.Codigo = pul.Cod_Produto
     WHERE
         f.Fantasia IN ({placeholders})
-    GROUP BY 
-        f.Fantasia, 
-        p.Descricao, 
-        p.Codigo, 
-        pr.Sta_AbcUniVenFab,  
-        pr.Qtd_Dispon, 
+    GROUP BY
+        f.Fantasia,
+        p.Descricao,
+        p.Codigo,
+        pr.Sta_AbcUniVenFab,
+        pr.Qtd_Dispon,
+        pr.Qtd_Quaren,
         pr.Qtd_EstMin,
         pul.C_QtdPulmao,
         pr.Qtd_Fisico
     ORDER BY
 		p.Descricao ASC;
     """
-    
+
     cursor.execute(query, supplier_names)
     result = cursor.fetchall()
 
@@ -618,7 +628,7 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
 
     for row in result:
         descricao = row.Descricao
-        estoque_disponivel = row.Qtd_Dispon
+        estoque_disponivel = row.Qtd_Dispon - row.Qtd_Quaren
         estoque_fisico = row.Qtd_Fisico
         estoque_transito = row.C_QtdPulmao
         estoque_minimo = row.Qtd_EstMin
@@ -667,17 +677,17 @@ def fetch_total_rupture_risk(days_estimate):
                     SUM(CASE WHEN MONTH(v.DATA) = MONTH(DATEADD(MONTH, -3, GETDATE())) AND YEAR(v.DATA) = YEAR(DATEADD(MONTH, -3, GETDATE())) THEN v.QUANTIDADE ELSE 0 END)
                 ) / 90.0, 2
             ) AS Media_Diaria_Trimestre
-        FROM 
+        FROM
             fVENDAS v
-        JOIN 
+        JOIN
             PRODU p ON v.IDPRODUTO = p.Codigo
-        JOIN 
+        JOIN
             PRXES pr ON pr.Cod_Produt = p.Codigo
-        JOIN 
+        JOIN
         	FABRI f ON p.Cod_Fabricante = f.Codigo
         LEFT JOIN
 			V_PULMAO pul ON p.Codigo = pul.Cod_Produto
-        GROUP BY 
+        GROUP BY
             p.Codigo,
             pr.Qtd_Dispon,
             pul.C_QtdPulmao,
@@ -708,36 +718,192 @@ def fetch_total_rupture_risk(days_estimate):
 
     return total_risk_items
 
-def fetch_items_within_months(months):
+#CONTAGEM
+def fetch_items_within_months(months=12):
     connection = get_db_connection()
     cursor = connection.cursor()
 
     query = """
-        SELECT 
+        SELECT
             f.Fantasia,
             p.Codigo,
             p.Descricao,
             pr.Qtd_Dispon,
-            nfe.Dat_Vencim,
-            nfe.Cod_Lote
-        FROM 
+            pl.Dat_Vencim,
+            pl.Cod_Lote,
+            pl.Qtd_SldPra,
+            vpr.Codigo
+        FROM
             PRODU p
-        JOIN 
+        JOIN
             FABRI f ON p.Cod_Fabricante = f.Codigo
-        JOIN 
+        JOIN
             PRXES pr ON pr.Cod_Produt = p.Codigo
-        LEFT JOIN 
-            NFEIT nfe ON p.Codigo = nfe.Cod_Produto
-        GROUP BY 
+        JOIN
+            PRLTL pl ON p.Codigo = pl.Cod_Produt
+        JOIN
+            V_PRCPL vpr ON p.Codigo = vpr.Codigo
+        WHERE
+            pl.Dat_Vencim > GETDATE() AND pl.Dat_Vencim <= DATEADD(MONTH, ?, GETDATE())
+        AND f.Fantasia IN (
+            'ABL',
+            'ACCUMED PRO MED',
+            'AGPMED',
+            'AIRELA IND. FARMACEUTICA',
+            'AMERICA',
+            'AMERICAN',
+            'APOLO',
+            'ARTE NATIVA',
+            'AUROBINDO',
+            'AVVIO',
+            'BE CARE',
+            'BEKER',
+            'BELFAR',
+            'BELFAR GEN',
+            'BIOCHIMICO',
+            'BIOLAB',
+            'BIONATUS',
+            'BLAU',
+            'BLOWTEX',
+            'BRASTERAPICA',
+            'BRAVIR',
+            'BUBA',
+            'CAZI',
+            'CBEMED',
+            'CCM',
+            'CELLERA FARMA',
+            'CIFARMA',
+            'CLINMED',
+            'CREMER',
+            'CRISTALIA',
+            'DELLAMED S.A.',
+            'DELTA',
+            'DESCARBOX',
+            'DESCARPACK',
+            'DISTRIMEDICA COMERCIO DE',
+            'E M S',
+            'EMS',
+            'EMS GENERICO',
+            'EQUIPLEX',
+            'EUGIA PHARMA INDUSTRIA FA',
+            'EUROFARMA',
+            'EUROFARMA GENERICO',
+            'FAMI',
+            'FARMACE',
+            'FARMAX',
+            'FLEXPELL',
+            'FORT FLEX',
+            'FORTSAN',
+            'FRESENIUS',
+            'FZ MED',
+            'GENOM',
+            'GEOLAB',
+            'GERMED',
+            'GLOBO',
+            'GREEN PHARMA',
+            'GSK',
+            'G-TECH',
+            'HALEX ISTAR',
+            'HEALTHY DO BRASIL',
+            'HIDROLIGHT',
+            'HIPOLABOR',
+            'HIPOLABOR GENERICO',
+            'HISAMITSU',
+            'HYPOFARMA',
+            'HYPOFARMA GENERICO',
+            'IFAL',
+            'INCOTERM',
+            'INDALABOR INDAIA LABORATO',
+            'ISOFARMA',
+            'J.PROLAB',
+            'JANSSEN',
+            'JOSE IVANILDO MIRANDA MAT',
+            'KASMED',
+            'KEDRION BRASIL DISTRIBUID',
+            'LABOR IMPORT IMP EXP LTDA',
+            'LABOTRAT',
+            'LALAN',
+            'LAPON',
+            'LEGRAND',
+            'LEMGRUBER',
+            'LOCAWARE',
+            'LUDAN INDUSTRIA E COMERCI',
+            'MARK MED',
+            'MAXINUTRI',
+            'MDA',
+            'MDR SAUDE',
+            'MEDEVICE DO BRASIL COMERC',
+            'MEDI COMPANY',
+            'MEDIX',
+            'MEDIX BRASIL',
+            'MEDQUIMICA',
+            'MEDSONDA',
+            'MEDTEX',
+            'MEM CIRURGICA LTDA',
+            'MERCUR',
+            'MG',
+            'MISSNER',
+            'MULTILAB',
+            'MUNILA COSMETICOS LTDA',
+            'NATCOFARMA BRASIL',
+            'NATHY',
+            'NATIVITA',
+            'NATULAB',
+            'NATURELIFE',
+            'NEVOARN INDUSTRIA TEXTIL',
+            'NOVAFARMA GENERICO',
+            'NOVAQUIMICA',
+            'NOVARTIS',
+            'NUTRIEX',
+            'OCTAPHARMA',
+            'OMRON',
+            'OSORIO DE MORAES',
+            'PHARLAB',
+            'PHARMASCIENCE',
+            'PLUMAX',
+            'POLAR FIX',
+            'PRATI',
+            'PRATI GENERICO',
+            'PROHOSPITAL',
+            'RANBAXY',
+            'RANGEL',
+            'RAPHAEL MARQUES OLIVEIRA',
+            'RIOQUIMICA',
+            'SANDOZ',
+            'SANFARMA',
+            'SANOFI AVENTIS',
+            'SANTISA',
+            'SHALON FIOS CIRUGICOS',
+            'SOLIDOR',
+            'SR',
+            'SUBURBAN',
+            'SUN PHARMA',
+            'TEUTO',
+            'TKL',
+            'UNIAO QUIMICA',
+            'UNIAO QUIMICA GENERICO',
+            'UNICHEM FARMACEUTICA',
+            'UNIPHAR',
+            'UNITED MEDICAL LTDA.',
+            'VIC PHARMA',
+            'VITAMEDIC',
+            'VMG FARMACEUTICA',
+            'WASSER FARMA',
+            'ZHALINGER',
+            'ZYDUS'
+        )
+        GROUP BY
             f.Fantasia,
-            p.Codigo, 
+            p.Codigo,
             p.Descricao,
-            pr.Qtd_Dispon, 
-            nfe.Dat_Vencim,
-            nfe.Cod_Lote;
+            pr.Qtd_Dispon,
+            pl.Dat_Vencim,
+            pl.Cod_Lote,
+            pl.Qtd_SldPra,
+            vpr.Codigo;
     """
 
-    cursor.execute(query)
+    cursor.execute(query, (months,))
     result = cursor.fetchall()
 
     total_within_months = 0
@@ -773,30 +939,25 @@ def fetch_items_close_to_expiration(supplier_names, months):
     placeholders = ', '.join(['?'] * len(supplier_names))
 
     query = f"""
-    SELECT 
-        f.Fantasia,
-        p.Codigo,
-        p.Descricao,
-        pr.Qtd_Dispon,
-        pr.Sta_AbcUniVenFab,
-        nfe.Dat_Vencim,
-        nfe.Cod_Lote
-    FROM 
-        PRODU p
-    JOIN 
-        FABRI f ON p.Cod_Fabricante = f.Codigo
-    JOIN 
-        PRXES pr ON pr.Cod_Produt = p.Codigo
-    LEFT JOIN 
-        NFEIT nfe ON p.Codigo = nfe.Cod_Produto
-    WHERE 
-        f.Fantasia IN ({placeholders})
-    GROUP BY 
-        f.Fantasia, p.Codigo, p.Descricao, pr.Qtd_Dispon, pr.Sta_AbcUniVenFab, nfe.Dat_Vencim, nfe.Cod_Lote
-    HAVING 
-        MAX(nfe.Dat_Vencim) <= DATEADD(MONTH, ?, GETDATE())
-    ORDER BY 
-        f.Fantasia, p.Descricao;
+        SELECT
+            f.Fantasia,
+            p.Codigo,
+            p.Descricao,
+            pr.Sta_AbcUniVenFab,
+            pl.Cod_Lote,
+            pl.Qtd_SldPra,
+            pl.Dat_Vencim
+        FROM PRODU p
+        JOIN
+            FABRI f ON p.Cod_Fabricante = f.Codigo
+        JOIN
+            PRXES pr ON pr.Cod_Produt = p.Codigo
+        JOIN
+            PRLTL pl ON p.Codigo = pl.Cod_Produt
+        WHERE f.Fantasia IN ({placeholders})
+        AND pl.Dat_Vencim > GETDATE()
+        AND pl.Dat_Vencim <= DATEADD(MONTH, ?, GETDATE())
+        ORDER BY f.Fantasia, p.Descricao;
     """
 
     cursor.execute(query, (*supplier_names, months))
@@ -805,10 +966,9 @@ def fetch_items_close_to_expiration(supplier_names, months):
     items_by_supplier = {}
 
     for row in results:
-
-        if row.Qtd_Dispon == 0:
+        if row.Qtd_SldPra == 0:
             continue
-        
+
         data_vencimento = row.Dat_Vencim
         if data_vencimento:
             data_vencimento = data_vencimento.strftime('%d-%m-%Y') if isinstance(data_vencimento, datetime) else data_vencimento
@@ -816,7 +976,7 @@ def fetch_items_close_to_expiration(supplier_names, months):
         item = {
             "codigo": row.Codigo,
             "descricao": row.Descricao,
-            "quantidade_estoque": row.Qtd_Dispon,
+            "quantidade_estoque": row.Qtd_SldPra,
             "data_vencimento": data_vencimento,
             "lote": row.Cod_Lote,
             "curva": row.Sta_AbcUniVenFab,
@@ -837,41 +997,41 @@ def fetch_total_items_stopped(days):
     cursor = connection.cursor()
 
     query = """
-        SELECT 
-            p.Codigo, 
-            f.Fantasia, 
-            p.Descricao, 
-            pr.Qtd_Dispon AS Quantidade_Estoque, 
-            (SELECT MAX(v.DATA) 
-             FROM fVENDAS v 
-             WHERE v.IDPRODUTO = p.Codigo) AS Ultima_Venda, 
-            pr.Sta_AbcUniVenFab AS Curva, 
-            (SELECT MAX(nfe.Dat_Movimento) 
-             FROM NFEIT nfe 
+        SELECT
+            p.Codigo,
+            f.Fantasia,
+            p.Descricao,
+            pr.Qtd_Dispon AS Quantidade_Estoque,
+            (SELECT MAX(v.DATA)
+             FROM fVENDAS v
+             WHERE v.IDPRODUTO = p.Codigo) AS Ultima_Venda,
+            pr.Sta_AbcUniVenFab AS Curva,
+            (SELECT MAX(nfe.Dat_Movimento)
+             FROM NFEIT nfe
              WHERE nfe.Cod_Produto = p.Codigo) AS Ultima_Entrada
-        FROM 
+        FROM
             PRODU p
-        JOIN 
+        JOIN
             FABRI f ON p.Cod_Fabricante = f.Codigo
-        LEFT JOIN 
+        LEFT JOIN
             PRXES pr ON pr.Cod_Produt = p.Codigo
-        LEFT JOIN 
+        LEFT JOIN
             NFEIT nfe ON p.Codigo = nfe.Cod_Produto
-        GROUP BY 
-            p.Codigo, 
-            p.Descricao, 
-            f.Fantasia, 
-            pr.Qtd_Dispon, 
+        GROUP BY
+            p.Codigo,
+            p.Descricao,
+            f.Fantasia,
+            pr.Qtd_Dispon,
             pr.Sta_AbcUniVenFab
-        HAVING 
-            (SELECT MAX(v.DATA) 
-             FROM fVENDAS v 
-             WHERE v.IDPRODUTO = p.Codigo) IS NULL 
-            OR (SELECT MAX(v.DATA) 
-                FROM fVENDAS v 
+        HAVING
+            (SELECT MAX(v.DATA)
+             FROM fVENDAS v
+             WHERE v.IDPRODUTO = p.Codigo) IS NULL
+            OR (SELECT MAX(v.DATA)
+                FROM fVENDAS v
                 WHERE v.IDPRODUTO = p.Codigo) < DATEADD(DAY, -?, GETDATE())
-            AND (SELECT MAX(nfe.Dat_Movimento) 
-                 FROM NFEIT nfe 
+            AND (SELECT MAX(nfe.Dat_Movimento)
+                 FROM NFEIT nfe
                  WHERE nfe.Cod_Produto = p.Codigo) < DATEADD(DAY, -30, GETDATE())
     """
 
@@ -900,43 +1060,43 @@ def fetch_items_stopped_days(supplier_names, days):
     placeholders = ", ".join("?" for _ in supplier_names)
 
     query = f"""
-        SELECT 
-            p.Codigo, 
-            f.Fantasia, 
-            p.Descricao, 
-            pr.Qtd_Dispon AS Quantidade_Estoque, 
-            (SELECT MAX(v.DATA) 
-             FROM fVENDAS v 
-             WHERE v.IDPRODUTO = p.Codigo) AS Ultima_Venda, 
-            pr.Sta_AbcUniVenFab AS Curva, 
-            (SELECT MAX(nfe.Dat_Movimento) 
-             FROM NFEIT nfe 
+        SELECT
+            p.Codigo,
+            f.Fantasia,
+            p.Descricao,
+            pr.Qtd_Dispon AS Quantidade_Estoque,
+            (SELECT MAX(v.DATA)
+             FROM fVENDAS v
+             WHERE v.IDPRODUTO = p.Codigo) AS Ultima_Venda,
+            pr.Sta_AbcUniVenFab AS Curva,
+            (SELECT MAX(nfe.Dat_Movimento)
+             FROM NFEIT nfe
              WHERE nfe.Cod_Produto = p.Codigo) AS Ultima_Entrada
-        FROM 
+        FROM
             PRODU p
-        JOIN 
+        JOIN
             FABRI f ON p.Cod_Fabricante = f.Codigo
-        LEFT JOIN 
+        LEFT JOIN
             PRXES pr ON pr.Cod_Produt = p.Codigo
-        LEFT JOIN 
+        LEFT JOIN
             NFEIT nfe ON p.Codigo = nfe.Cod_Produto
-        WHERE 
+        WHERE
             f.Fantasia IN ({placeholders})
-        GROUP BY 
-            p.Codigo, 
-            p.Descricao, 
-            f.Fantasia, 
-            pr.Qtd_Dispon, 
+        GROUP BY
+            p.Codigo,
+            p.Descricao,
+            f.Fantasia,
+            pr.Qtd_Dispon,
             pr.Sta_AbcUniVenFab
-        HAVING 
-            (SELECT MAX(v.DATA) 
-             FROM fVENDAS v 
-             WHERE v.IDPRODUTO = p.Codigo) IS NULL 
-            OR (SELECT MAX(v.DATA) 
-                FROM fVENDAS v 
+        HAVING
+            (SELECT MAX(v.DATA)
+             FROM fVENDAS v
+             WHERE v.IDPRODUTO = p.Codigo) IS NULL
+            OR (SELECT MAX(v.DATA)
+                FROM fVENDAS v
                 WHERE v.IDPRODUTO = p.Codigo) < DATEADD(DAY, -?, GETDATE())
-            AND (SELECT MAX(nfe.Dat_Movimento) 
-                 FROM NFEIT nfe 
+            AND (SELECT MAX(nfe.Dat_Movimento)
+                 FROM NFEIT nfe
                  WHERE nfe.Cod_Produto = p.Codigo) < DATEADD(DAY, -30, GETDATE())
     """
 
