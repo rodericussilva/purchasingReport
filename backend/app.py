@@ -111,8 +111,8 @@ def get_items_close_to_expiration():
     try:
         items_by_supplier = fetch_items_close_to_expiration(supplier_names, months)
 
-        if not items_by_supplier:
-            return jsonify({"message": f"Nenhum item próximo ao vencimento em até {months} meses encontrado para os fornecedores especificados!"}), 404
+        # if not items_by_supplier:
+        #     return jsonify({"message": f"Nenhum item prximo ao vencimento em até {months} meses encontrado para os fornecedores especificados!"}), 404
 
         response_data = [
             {"fornecedor": supplier, "produtos": produtos}
@@ -161,6 +161,6 @@ def get_stagnant_items():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    host = os.getenv('FLASK_HOST', '127.0.0.1')
+    host = os.getenv('FLASK_HOST', '0.0.0.0')
     port = int(os.getenv('FLASK_PORT', 5000))
     app.run(host=host, port=port, debug=True)

@@ -9,9 +9,6 @@ load_dotenv()
 REPORTS_DIR = os.path.join(os.getcwd(), 'static', 'reports_files')
 
 def generate_pdf(supplier_data_list):
-    if not isinstance(supplier_data_list, list) or len(supplier_data_list) == 0:
-        raise ValueError("Os dados dos fornecedores estão vazios ou têm formato inválido.")
-
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     pdf_path = os.path.join(REPORTS_DIR, f'report_{timestamp}.pdf')
 
@@ -25,91 +22,137 @@ def generate_pdf(supplier_data_list):
     margin_top = 50
     margin_left = 60
     margin_right = 60
+    row_height = 15
 
     def draw_header():
         logo_path = "static/logo-removebg-preview.png"
         logo_width, logo_height = 40, 40
         c.drawImage(logo_path, margin_left, height - margin_top - 40, width=logo_width, height=logo_height)
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(margin_left + 45, height - margin_top - 25, "TS DISTRIBUIDORA")
-        c.drawString(margin_left + 240, height - margin_top - 10, "Tabela de Sugestões de Compras")
+        c.drawString(margin_left + 45, height - margin_top - 35, "TS DISTRIBUIDORA")
+        c.drawString(margin_left + 180, height - margin_top - 10, "Relatório de Produtos")
 
-    def draw_supplier_info(supplier, replacement_days, supply_days, table_y):
+    def draw_supplier_info(supplier, table_y):
         c.setFont("Helvetica", 10)
-        info_text = f"Fabricante: {supplier}      Dias de Reposição: {replacement_days}      Dias de Suprimento: {supply_days}"
+        info_text = f"Fornecedor: {supplier}                                   Data de Geração: {datetime.now().strftime('%d/%m/%Y')}"
         c.drawString(margin_left, table_y, info_text)
         c.line(margin_left, table_y - 5, width - margin_right, table_y - 5)
         return table_y - 20
 
-    def draw_table_header(table_y, col_positions):
+    def draw_table_header(table_y):
         c.setFont("Helvetica-Bold", 7)
-        headers = [
-            "Descrição", "Cobertura", " ", " ", 
-            " ", " ", "Média Mês", 
-            "Estoque Disponível", "Sugestão de Compra", "Valor de Compra", "Curva"
-        ]
-        for i, header in enumerate(headers):
-            c.drawString(col_positions[i] + 5, table_y - 10, header)
-        return table_y - 25
+        columns = ["Código", "Descrição", "Cobertura", "Unidades Faturadas Mês 3", "Unidades Faturadas Mês 2", "Unidades Faturadas Mês 1", "Unidades Faturadas Mês 0", "Méd. Mês", "Est. Disponível", "Est. Minimo", "Trânsito", "Sugestão de Compra", "Valor de Compra", "Curva"]
+        x_position = margin_left
+        for column in columns:
+            c.drawString(x_position + 5, table_y - 10, column)
+            x_position += col_widths[columns.index(column)]
+        
+        table_width = sum(col_widths)
+        c.rect(margin_left, table_y - 20, table_width, 20, stroke=1, fill=0)
 
-    def draw_row_line(table_y, col_positions):
-        c.line(margin_left, table_y, col_positions[-1] + 30, table_y)
+        x_position = margin_left
+        for width in col_widths:
+            c.line(x_position, table_y, x_position, table_y - 20)
+            x_position += width
 
-    row_height = 12
-    max_rows_per_page = 20
+    def draw_table_content(table_data, table_y):
+        rows_on_page = 0
+
+        for row in table_data:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                table_y = new_page()
+                draw_table_header(table_y)
+                rows_on_page = 0
+
+            x_position = margin_left
+            for i, cell in enumerate(row.values()):
+                c.setFont("Helvetica", 8)
+                c.drawString(x_position + 5, table_y - 10, str(cell))
+                x_position += col_widths[i]
+
+            draw_row_line(table_y)
+            table_y -= row_height
+            rows_on_page += 1
+
+        return table_y
+
+    def draw_summary_table_header(table_y, mes_labels):
+        c.setFont("Helvetica-Bold", 7)
+        columns = ["-", mes_labels['mes0'], mes_labels['mes1'], mes_labels['mes2'], mes_labels['mes3'], "Média Mês", "Total Disponível", "Sugestão"]
+        x_position = margin_left
+        for i, column in enumerate(columns):
+            c.drawString(x_position + 5, table_y - 10, column)
+            x_position += col_widths_summary[i]
+        
+        table_width = sum(col_widths_summary)
+        c.rect(margin_left, table_y - 20, table_width, 20, stroke=1, fill=0)
+
+        x_position = margin_left
+        for width in col_widths_summary:
+            c.line(x_position, table_y, x_position, table_y - 20)
+            x_position += width
+
+    def draw_summary_table_content(summary_data, table_y):
+        rows_on_page = 0
+
+        for row in summary_data:
+            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
+                table_y = new_page()
+                draw_summary_table_header(table_y, row['mes_labels'])
+                rows_on_page = 0
+
+            x_position = margin_left
+            for i, cell in enumerate(row.values()):
+                c.setFont("Helvetica", 8)
+                c.drawString(x_position + 5, table_y - 10, str(cell))
+                x_position += col_widths_summary[i]
+
+            draw_row_line(table_y)
+            table_y -= row_height
+            rows_on_page += 1
+
+        return table_y
+
+    def draw_row_line(table_y):
+        table_width = sum(col_widths)
+        c.line(margin_left, table_y, margin_left + table_width, table_y)
 
     def new_page():
         c.showPage()
         draw_header()
-        c.setFont("Helvetica", 7)
         return height - margin_top - 80
 
-    draw_header()
-    c.setFont("Helvetica", 7)
-    table_y = height - margin_top - 80
+    col_widths = [50, 150, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]
+    col_widths_summary = [50, 50, 50, 50, 50, 50, 50, 50]
+    max_rows_per_page = 20
 
-    col_positions = [margin_left, margin_left + 180, margin_left + 230, margin_left + 270, margin_left + 310, margin_left + 350, margin_left + 400, margin_left + 440, margin_left + 520, margin_left + 610, margin_left + 695]
-    headers = [
-        "descricao", "cobertura", "unidades_faturadas_mes3", "unidades_faturadas_mes2", 
-        "unidades_faturadas_mes1", "unidades_faturadas_mes0", "media_faturada", 
-        "estoque_disponivel", "sugestao_compra", "valor_venda", "curva"
-    ]
+    draw_header()
+    table_y = height - margin_top - 80
 
     for supplier_data in supplier_data_list:
         supplier = supplier_data.get("supplier", "Desconhecido")
-        replacement_days = supplier_data.get("replacement_days", "N/A")
-        supply_days = supplier_data.get("supply_days", "N/A")
-        produtos = supplier_data.get("produtos", [])
+        table_data = supplier_data.get("produtos", [])
+        summary_data = supplier_data.get("summary", [])
 
-        if not isinstance(produtos, list):
+        if not isinstance(table_data, list):
             raise ValueError("A chave 'produtos' deve ser uma lista.")
 
         if table_y - margin_bottom < 150:
             table_y = new_page()
 
-        table_y = draw_supplier_info(supplier, replacement_days, supply_days, table_y)
-        table_y = draw_table_header(table_y, col_positions)
-        rows_on_page = 0
+        table_y = draw_supplier_info(supplier, table_y)
+        draw_table_header(table_y)
+        table_y -= 25
 
-        for product in produtos:
-            if rows_on_page >= max_rows_per_page or table_y - row_height < margin_bottom:
-                table_y = new_page()
-                table_y = draw_supplier_info(supplier, replacement_days, supply_days, table_y)
-                table_y = draw_table_header(table_y, col_positions)
-                rows_on_page = 0
-
-            c.setFont("Helvetica", 7)
-            for i, col_position in enumerate(col_positions):
-                c.drawString(col_position + 5, table_y - 10, str(product.get(headers[i], 'N/A')))
-
-            draw_row_line(table_y, col_positions)
-            table_y -= row_height
-            rows_on_page += 1
+        table_y = draw_table_content(table_data, table_y)
 
         if table_y - margin_bottom < 150:
             table_y = new_page()
 
-        table_y -= 20
+        draw_summary_table_header(table_y, table_data[0]['mes_labels'])
+        table_y -= 25
+
+        table_y = draw_summary_table_content(summary_data, table_y)
 
     c.save()
     return f"http://{os.getenv('FLASK_HOST')}:{os.getenv('FLASK_PORT')}/static/reports_files/{os.path.basename(pdf_path)}"

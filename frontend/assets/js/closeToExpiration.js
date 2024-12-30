@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(data => {
                 if (data.length === 0) {
-                    alert("Nenhum item próximo ao vencimento encontrado.");
+                    alert(`Nenhum item próximo ao vencimento em até ${months} meses encontrado para o fornecedor especificado!`);
                     return;
                 }
 

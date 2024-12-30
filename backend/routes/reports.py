@@ -30,12 +30,14 @@ def generate_report():
                 'supplier': supplier,
                 'replacement_days': replacement_days,
                 'supply_days': supply_days,
-                'produtos': []
+                'produtos': [],
+                'summary': {}
             }
             
             for supplier_entry in table_data:
-                if supplier in supplier_entry['fornecedor']:
+                if supplier == supplier_entry['fornecedor']:
                     supplier_data['produtos'] = supplier_entry['produtos']
+                    supplier_data['summary'] = supplier_entry.get('summary', {})
 
             supplier_data_list.append(supplier_data)
 
@@ -58,7 +60,6 @@ def generate_report():
         return jsonify({'error': str(e)}), 500
     finally:
         lock.release()
-
 
 @report.route('/generate_rupture_report', methods=['POST'])
 def generate_rupture_report():
