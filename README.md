@@ -111,5 +111,6 @@ A aplicação permite:
 
 ---
 
-## Contato
-Desenvolvido por: Rodrigo Silva
+## Autor
+Desenvolvido por: Rodrigo Silva (RS)
+Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para entrar em contato comigo em rodericus@alu.ufc.br
