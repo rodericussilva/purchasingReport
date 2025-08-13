@@ -51,7 +51,7 @@ A aplicação permite:
 
 **Frontend**
 - HTML5 / CSS3 / Bootstrap  
-- JavaScript (Vanilla)  
+- JavaScript  
 - simple-datatables (utilizado em `main.js`)  
 - Estrutura: páginas estáticas servidas em `frontend/` (ex.: `index.html`, `purchase-suggestions.html`, `rupture-risk.html`, `stopped-products.html`, `close-to-expiration.html`)
 
