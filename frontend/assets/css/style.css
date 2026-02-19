@@ -470,7 +470,6 @@ h6 {
 .dashboard .customers-card .card-icon {
   color: #ff771d;
   background: #ffecdf;
-  /* fundo icones */
 }
 
 .dashboard .superior-card .card-icon {
@@ -481,6 +480,11 @@ h6 {
 .dashboard .maturity-card .card-icon {
   color: red;
   background-color: rgba(235, 34, 34, 0.377);
+}
+
+.dashboard .commission-card .card-icon {
+  color: rgb(93, 243, 6);
+  background: rgba(29, 70, 1, 0.966);
 }
 
 /*--------------------------------------------------------------
