@@ -1,6 +1,8 @@
 from database import get_db_connection
 from datetime import datetime
 from decimal import Decimal
+import re
+import unicodedata
 
 def fetch_suppliers():
     connection = get_db_connection()
@@ -294,6 +296,53 @@ def fetch_suppliers():
 
     return suppliers
 
+def fetch_sellers():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    query = """       
+        SELECT DISTINCT
+            vendedor.Codigo,
+            vendedor.Nome_Guerra
+        FROM (
+            SELECT
+                COD_VENDEDOR = cb.Cod_Vendedor
+            FROM NFSCB cb
+            JOIN NFSIT it
+            ON cb.Cod_Estabe = it.Cod_Estabe
+            AND cb.Ser_Nota   = it.Ser_Nota
+            AND cb.Num_Nota   = it.Num_Nota
+            JOIN POCOM pc
+            ON it.Id_PolCom = pc.Id_PolCom
+            WHERE cb.Status    = 'F'
+            AND cb.Tip_Saida = 'V'
+            GROUP BY cb.Cod_Vendedor
+        ) AS ven
+        JOIN V_VENDE AS vendedor
+        ON ven.COD_VENDEDOR = vendedor.Codigo
+        WHERE vendedor.Codigo IN (
+            84, 98, 117, 119, 129, 130, 131, 137,
+            143, 144, 145, 148, 149, 155, 156, 172, 192
+        )
+        ORDER BY vendedor.Nome_Guerra ASC;
+    """
+
+    cursor.execute(query)
+    result = cursor.fetchall()
+
+    sellers = [
+        {
+            'codigo': row.Codigo,
+            'nome': row.Nome_Guerra
+        }
+        for row in result
+    ]
+
+    cursor.close()
+    connection.close()
+
+    return sellers
+
 def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -306,6 +355,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             p.Descricao,
             p.Codigo,
             pr.Sta_AbcUniVenFab,
+            pr.Qtd_Transi,
             pr.Prc_Venda,
             ROUND(nfe.Prc_UniFat, 2) AS Prc_Compra,
             COALESCE(pul.C_QtdPulmao, 0) AS C_QtdPulmao,
@@ -368,6 +418,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             p.Descricao,
             p.Codigo,
             pr.Sta_AbcUniVenFab,
+            pr.Qtd_Transi,
             pr.Prc_Venda,
             nfe.Prc_UniFat,
             pul.C_QtdPulmao,
@@ -464,7 +515,7 @@ def fetch_products_by_suppliers(supplier_names, replacement_days, supply_days):
             'media_faturada': Decimal(row.Media_Fat or 0),
             'estoque_minimo': Decimal(row.Qtd_EstMin or 0),
             'estoque_disponivel': Decimal(row.Qtd_Dispon or 0),
-            'transito': Decimal(row.C_QtdPulmao or 0),
+            'transito': Decimal(row.Qtd_Transi or 0),
             'sugestao_compra': sugestao,
             'valor_compra': formatted_buy_price,
             'valor_venda': formatted_sale_price,
@@ -549,153 +600,6 @@ def fetch_total_suggestions():
             JOIN PRODU p ON v.IDPRODUTO = p.Codigo
             JOIN FABRI f ON p.Cod_Fabricante = f.Codigo
             JOIN PRXES pr ON pr.Cod_Produt = p.Codigo
-            WHERE f.Fantasia IN (
-            'ABL',
-            'ACCUMED PRO MED',
-            'AGPMED',
-            'AIRELA IND. FARMACEUTICA',
-            'AMERICA',
-            'AMERICAN',
-            'APOLO',
-            'ARTE NATIVA',
-            'AUROBINDO',
-            'AVVIO',
-            'BE CARE',
-            'BEKER',
-            'BELFAR',
-            'BELFAR GEN',
-            'BIOCHIMICO',
-            'BIOLAB',
-            'BIONATUS',
-            'BLAU',
-            'BLOWTEX',
-            'BRASTERAPICA',
-            'BRAVIR',
-            'BUBA',
-            'CAZI',
-            'CBEMED',
-            'CCM',
-            'CELLERA FARMA',
-            'CIFARMA',
-            'CLINMED',
-            'CREMER',
-            'CRISTALIA',
-            'DELLAMED S.A.',
-            'DELTA',
-            'DESCARBOX',
-            'DESCARPACK',
-            'DISTRIMEDICA COMERCIO DE',
-            'E M S',
-            'EMS',
-            'EMS GENERICO',
-            'EQUIPLEX',
-            'EUGIA PHARMA INDUSTRIA FA',
-            'EUROFARMA',
-            'EUROFARMA GENERICO',
-            'FAMI',
-            'FARMACE',
-            'FARMAX',
-            'FLEXPELL',
-            'FORT FLEX',
-            'FORTSAN',
-            'FRESENIUS',
-            'FZ MED',
-            'GENOM',
-            'GEOLAB',
-            'GERMED',
-            'GLOBO',
-            'GREEN PHARMA',
-            'GSK',
-            'G-TECH',
-            'HALEX ISTAR',
-            'HEALTHY DO BRASIL',
-            'HIDROLIGHT',
-            'HIPOLABOR',
-            'HIPOLABOR GENERICO',
-            'HISAMITSU',
-            'HYPOFARMA',
-            'HYPOFARMA GENERICO',
-            'IFAL',
-            'INCOTERM',
-            'INDALABOR INDAIA LABORATO',
-            'ISOFARMA',
-            'J.PROLAB',
-            'JANSSEN',
-            'JOSE IVANILDO MIRANDA MAT',
-            'KASMED',
-            'KEDRION BRASIL DISTRIBUID',
-            'LABOR IMPORT IMP EXP LTDA',
-            'LABOTRAT',
-            'LALAN',
-            'LAPON',
-            'LEGRAND',
-            'LEMGRUBER',
-            'LOCAWARE',
-            'LUDAN INDUSTRIA E COMERCI',
-            'MARK MED',
-            'MAXINUTRI',
-            'MDA',
-            'MDR SAUDE',
-            'MEDEVICE DO BRASIL COMERC',
-            'MEDI COMPANY',
-            'MEDIX',
-            'MEDIX BRASIL',
-            'MEDQUIMICA',
-            'MEDSONDA',
-            'MEDTEX',
-            'MEM CIRURGICA LTDA',
-            'MERCUR',
-            'MG',
-            'MISSNER',
-            'MULTILAB',
-            'MUNILA COSMETICOS LTDA',
-            'NATCOFARMA BRASIL',
-            'NATHY',
-            'NATIVITA',
-            'NATULAB',
-            'NATURELIFE',
-            'NEVOARN INDUSTRIA TEXTIL',
-            'NOVAFARMA GENERICO',
-            'NOVAQUIMICA',
-            'NOVARTIS',
-            'NUTRIEX',
-            'OCTAPHARMA',
-            'OMRON',
-            'OSORIO DE MORAES',
-            'PHARLAB',
-            'PHARMASCIENCE',
-            'PLUMAX',
-            'POLAR FIX',
-            'PRATI',
-            'PRATI GENERICO',
-            'PROHOSPITAL',
-            'RANBAXY',
-            'RANGEL',
-            'RAPHAEL MARQUES OLIVEIRA',
-            'RIOQUIMICA',
-            'SANDOZ',
-            'SANFARMA',
-            'SANOFI AVENTIS',
-            'SANTISA',
-            'SHALON FIOS CIRUGICOS',
-            'SOLIDOR',
-            'SR',
-            'SUBURBAN',
-            'SUN PHARMA',
-            'TEUTO',
-            'TKL',
-            'UNIAO QUIMICA',
-            'UNIAO QUIMICA GENERICO',
-            'UNICHEM FARMACEUTICA',
-            'UNIPHAR',
-            'UNITED MEDICAL LTDA.',
-            'VIC PHARMA',
-            'VITAMEDIC',
-            'VMG FARMACEUTICA',
-            'WASSER FARMA',
-            'ZHALINGER',
-            'ZYDUS'
-        )
             GROUP BY p.Codigo, f.Fantasia, pr.Qtd_Dispon
         ) AS subquery
         WHERE sugestao_compra > 0;
@@ -727,6 +631,7 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
         pr.Qtd_Dispon,
         pr.Qtd_Quaren,
         pr.Qtd_EstMin,
+        pr.Qtd_Transi,
         pul.C_QtdPulmao,
         pr.Qtd_Fisico,
 
@@ -762,6 +667,7 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
         pr.Qtd_Dispon,
         pr.Qtd_Quaren,
         pr.Qtd_EstMin,
+        pr.Qtd_Transi,
         pul.C_QtdPulmao,
         pr.Qtd_Fisico
     ORDER BY
@@ -777,7 +683,7 @@ def fetch_products_and_calculate_rupture(supplier_names, days_estimate):
         descricao = row.Descricao
         estoque_disponivel = row.Qtd_Dispon - row.Qtd_Quaren
         estoque_fisico = row.Qtd_Fisico
-        estoque_transito = row.C_QtdPulmao
+        estoque_transito = row.Qtd_Transi
         estoque_minimo = row.Qtd_EstMin
         media_diaria_venda = row.media_diaria_venda
         curva = row.Sta_AbcUniVenFab
@@ -815,6 +721,7 @@ def fetch_total_rupture_risk(days_estimate):
         SELECT
             p.Codigo,
             pr.Qtd_Dispon,
+            pr.Qtd_Transi,
             pul.C_QtdPulmao,
             pr.Qtd_EstMin,
             ROUND(
@@ -834,156 +741,10 @@ def fetch_total_rupture_risk(days_estimate):
         	FABRI f ON p.Cod_Fabricante = f.Codigo
         LEFT JOIN
 			V_PULMAO pul ON p.Codigo = pul.Cod_Produto
-        WHERE f.Fantasia IN (
-            'ABL',
-            'ACCUMED PRO MED',
-            'AGPMED',
-            'AIRELA IND. FARMACEUTICA',
-            'AMERICA',
-            'AMERICAN',
-            'APOLO',
-            'ARTE NATIVA',
-            'AUROBINDO',
-            'AVVIO',
-            'BE CARE',
-            'BEKER',
-            'BELFAR',
-            'BELFAR GEN',
-            'BIOCHIMICO',
-            'BIOLAB',
-            'BIONATUS',
-            'BLAU',
-            'BLOWTEX',
-            'BRASTERAPICA',
-            'BRAVIR',
-            'BUBA',
-            'CAZI',
-            'CBEMED',
-            'CCM',
-            'CELLERA FARMA',
-            'CIFARMA',
-            'CLINMED',
-            'CREMER',
-            'CRISTALIA',
-            'DELLAMED S.A.',
-            'DELTA',
-            'DESCARBOX',
-            'DESCARPACK',
-            'DISTRIMEDICA COMERCIO DE',
-            'E M S',
-            'EMS',
-            'EMS GENERICO',
-            'EQUIPLEX',
-            'EUGIA PHARMA INDUSTRIA FA',
-            'EUROFARMA',
-            'EUROFARMA GENERICO',
-            'FAMI',
-            'FARMACE',
-            'FARMAX',
-            'FLEXPELL',
-            'FORT FLEX',
-            'FORTSAN',
-            'FRESENIUS',
-            'FZ MED',
-            'GENOM',
-            'GEOLAB',
-            'GERMED',
-            'GLOBO',
-            'GREEN PHARMA',
-            'GSK',
-            'G-TECH',
-            'HALEX ISTAR',
-            'HEALTHY DO BRASIL',
-            'HIDROLIGHT',
-            'HIPOLABOR',
-            'HIPOLABOR GENERICO',
-            'HISAMITSU',
-            'HYPOFARMA',
-            'HYPOFARMA GENERICO',
-            'IFAL',
-            'INCOTERM',
-            'INDALABOR INDAIA LABORATO',
-            'ISOFARMA',
-            'J.PROLAB',
-            'JANSSEN',
-            'JOSE IVANILDO MIRANDA MAT',
-            'KASMED',
-            'KEDRION BRASIL DISTRIBUID',
-            'LABOR IMPORT IMP EXP LTDA',
-            'LABOTRAT',
-            'LALAN',
-            'LAPON',
-            'LEGRAND',
-            'LEMGRUBER',
-            'LOCAWARE',
-            'LUDAN INDUSTRIA E COMERCI',
-            'MARK MED',
-            'MAXINUTRI',
-            'MDA',
-            'MDR SAUDE',
-            'MEDEVICE DO BRASIL COMERC',
-            'MEDI COMPANY',
-            'MEDIX',
-            'MEDIX BRASIL',
-            'MEDQUIMICA',
-            'MEDSONDA',
-            'MEDTEX',
-            'MEM CIRURGICA LTDA',
-            'MERCUR',
-            'MG',
-            'MISSNER',
-            'MULTILAB',
-            'MUNILA COSMETICOS LTDA',
-            'NATCOFARMA BRASIL',
-            'NATHY',
-            'NATIVITA',
-            'NATULAB',
-            'NATURELIFE',
-            'NEVOARN INDUSTRIA TEXTIL',
-            'NOVAFARMA GENERICO',
-            'NOVAQUIMICA',
-            'NOVARTIS',
-            'NUTRIEX',
-            'OCTAPHARMA',
-            'OMRON',
-            'OSORIO DE MORAES',
-            'PHARLAB',
-            'PHARMASCIENCE',
-            'PLUMAX',
-            'POLAR FIX',
-            'PRATI',
-            'PRATI GENERICO',
-            'PROHOSPITAL',
-            'RANBAXY',
-            'RANGEL',
-            'RAPHAEL MARQUES OLIVEIRA',
-            'RIOQUIMICA',
-            'SANDOZ',
-            'SANFARMA',
-            'SANOFI AVENTIS',
-            'SANTISA',
-            'SHALON FIOS CIRUGICOS',
-            'SOLIDOR',
-            'SR',
-            'SUBURBAN',
-            'SUN PHARMA',
-            'TEUTO',
-            'TKL',
-            'UNIAO QUIMICA',
-            'UNIAO QUIMICA GENERICO',
-            'UNICHEM FARMACEUTICA',
-            'UNIPHAR',
-            'UNITED MEDICAL LTDA.',
-            'VIC PHARMA',
-            'VITAMEDIC',
-            'VMG FARMACEUTICA',
-            'WASSER FARMA',
-            'ZHALINGER',
-            'ZYDUS'
-        )
         GROUP BY
             p.Codigo,
             pr.Qtd_Dispon,
+            pr.Qtd_Transi,
             pul.C_QtdPulmao,
             pr.Qtd_EstMin;
     """
@@ -995,7 +756,7 @@ def fetch_total_rupture_risk(days_estimate):
 
     for row in result:
         estoque_disponivel = row.Qtd_Dispon
-        estoque_transito = row.C_QtdPulmao or 0
+        estoque_transito = row.Qtd_Transi or 0
         media_diaria_trimestre = row.Media_Diaria_Trimestre
 
         if estoque_transito > 0:
@@ -1311,153 +1072,6 @@ def fetch_total_items_stopped(days):
             PRXES pr ON pr.Cod_Produt = p.Codigo
         LEFT JOIN
             NFEIT nfe ON p.Codigo = nfe.Cod_Produto
-        WHERE f.Fantasia IN (
-            'ABL',
-            'ACCUMED PRO MED',
-            'AGPMED',
-            'AIRELA IND. FARMACEUTICA',
-            'AMERICA',
-            'AMERICAN',
-            'APOLO',
-            'ARTE NATIVA',
-            'AUROBINDO',
-            'AVVIO',
-            'BE CARE',
-            'BEKER',
-            'BELFAR',
-            'BELFAR GEN',
-            'BIOCHIMICO',
-            'BIOLAB',
-            'BIONATUS',
-            'BLAU',
-            'BLOWTEX',
-            'BRASTERAPICA',
-            'BRAVIR',
-            'BUBA',
-            'CAZI',
-            'CBEMED',
-            'CCM',
-            'CELLERA FARMA',
-            'CIFARMA',
-            'CLINMED',
-            'CREMER',
-            'CRISTALIA',
-            'DELLAMED S.A.',
-            'DELTA',
-            'DESCARBOX',
-            'DESCARPACK',
-            'DISTRIMEDICA COMERCIO DE',
-            'E M S',
-            'EMS',
-            'EMS GENERICO',
-            'EQUIPLEX',
-            'EUGIA PHARMA INDUSTRIA FA',
-            'EUROFARMA',
-            'EUROFARMA GENERICO',
-            'FAMI',
-            'FARMACE',
-            'FARMAX',
-            'FLEXPELL',
-            'FORT FLEX',
-            'FORTSAN',
-            'FRESENIUS',
-            'FZ MED',
-            'GENOM',
-            'GEOLAB',
-            'GERMED',
-            'GLOBO',
-            'GREEN PHARMA',
-            'GSK',
-            'G-TECH',
-            'HALEX ISTAR',
-            'HEALTHY DO BRASIL',
-            'HIDROLIGHT',
-            'HIPOLABOR',
-            'HIPOLABOR GENERICO',
-            'HISAMITSU',
-            'HYPOFARMA',
-            'HYPOFARMA GENERICO',
-            'IFAL',
-            'INCOTERM',
-            'INDALABOR INDAIA LABORATO',
-            'ISOFARMA',
-            'J.PROLAB',
-            'JANSSEN',
-            'JOSE IVANILDO MIRANDA MAT',
-            'KASMED',
-            'KEDRION BRASIL DISTRIBUID',
-            'LABOR IMPORT IMP EXP LTDA',
-            'LABOTRAT',
-            'LALAN',
-            'LAPON',
-            'LEGRAND',
-            'LEMGRUBER',
-            'LOCAWARE',
-            'LUDAN INDUSTRIA E COMERCI',
-            'MARK MED',
-            'MAXINUTRI',
-            'MDA',
-            'MDR SAUDE',
-            'MEDEVICE DO BRASIL COMERC',
-            'MEDI COMPANY',
-            'MEDIX',
-            'MEDIX BRASIL',
-            'MEDQUIMICA',
-            'MEDSONDA',
-            'MEDTEX',
-            'MEM CIRURGICA LTDA',
-            'MERCUR',
-            'MG',
-            'MISSNER',
-            'MULTILAB',
-            'MUNILA COSMETICOS LTDA',
-            'NATCOFARMA BRASIL',
-            'NATHY',
-            'NATIVITA',
-            'NATULAB',
-            'NATURELIFE',
-            'NEVOARN INDUSTRIA TEXTIL',
-            'NOVAFARMA GENERICO',
-            'NOVAQUIMICA',
-            'NOVARTIS',
-            'NUTRIEX',
-            'OCTAPHARMA',
-            'OMRON',
-            'OSORIO DE MORAES',
-            'PHARLAB',
-            'PHARMASCIENCE',
-            'PLUMAX',
-            'POLAR FIX',
-            'PRATI',
-            'PRATI GENERICO',
-            'PROHOSPITAL',
-            'RANBAXY',
-            'RANGEL',
-            'RAPHAEL MARQUES OLIVEIRA',
-            'RIOQUIMICA',
-            'SANDOZ',
-            'SANFARMA',
-            'SANOFI AVENTIS',
-            'SANTISA',
-            'SHALON FIOS CIRUGICOS',
-            'SOLIDOR',
-            'SR',
-            'SUBURBAN',
-            'SUN PHARMA',
-            'TEUTO',
-            'TKL',
-            'UNIAO QUIMICA',
-            'UNIAO QUIMICA GENERICO',
-            'UNICHEM FARMACEUTICA',
-            'UNIPHAR',
-            'UNITED MEDICAL LTDA.',
-            'VIC PHARMA',
-            'VITAMEDIC',
-            'VMG FARMACEUTICA',
-            'WASSER FARMA',
-            'ZHALINGER',
-            'ZYDUS'
-        )
         GROUP BY
             p.Codigo,
             p.Descricao,
@@ -1569,3 +1183,1417 @@ def fetch_items_stopped_days(supplier_names, days):
     connection.close()
 
     return stagnant_items_by_supplier
+
+def fetch_months_years_by_sellers(seller_codes):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    placeholders = ','.join(['?'] * len(seller_codes))
+
+    query = f"""        
+        SELECT DISTINCT
+            vvend.MES,
+            vvend.ANO
+        FROM (
+            SELECT
+                ANO = YEAR(cb.Dat_Emissao),
+                MES = MONTH(cb.Dat_Emissao),
+                COD_VENDEDOR = cb.Cod_Vendedor
+            FROM NFSCB cb
+            JOIN NFSIT it
+            ON cb.Cod_Estabe = it.Cod_Estabe
+            AND cb.Ser_Nota   = it.Ser_Nota
+            AND cb.Num_Nota   = it.Num_Nota
+            JOIN POCOM pc
+            ON it.Id_PolCom = pc.Id_PolCom
+            WHERE cb.Status    = 'F'
+            AND cb.Tip_Saida = 'V' 
+            GROUP BY
+                YEAR(cb.Dat_Emissao),
+                MONTH(cb.Dat_Emissao),
+                cb.Cod_Vendedor
+        ) AS vvend
+        WHERE vvend.COD_VENDEDOR IN ({placeholders})
+        ORDER BY vvend.ANO DESC, vvend.MES ASC;
+    """
+
+    cursor.execute(query, seller_codes)
+    result = cursor.fetchall()
+
+    data = [
+        {
+            'mes': row.MES,
+            'ano': row.ANO
+        }
+        for row in result
+    ]
+
+    cursor.close()
+    connection.close()
+
+    return data
+
+
+def normalize_policy_name(s: str) -> str:
+    """Normaliza nome de política para comparação: remove acentos, lowercase, colapsa espaços."""
+    if s is None:
+        return ""
+    s = unicodedata.normalize('NFKD', s)
+    s = s.encode('ascii', 'ignore').decode('ascii') 
+    s = s.strip().lower()
+    s = re.sub(r'\s+', ' ', s) 
+    return s
+
+RAW_POLICIES_PERCENT = {
+    117: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    137: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO MULTI": 1.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 2.5,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    84: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 2.5,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    172: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 2.5,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    145: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 2.5,
+        "FARMA 03 INTERIOR": 2.5,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    98: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    149: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    156: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    131: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    143: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    155: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    129: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    119: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    192: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    148: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    130: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+    144: {
+        "ARTE NATIVA ABRIL 2026": 2.0,
+        "ARTE NATIVA MAIO 2026": 2.0,
+        "ARTE NATIVA MAIO BON 2026": 2.0,
+        "ARTE NATIVA ABR BON 2026": 2.0,
+        "BELLAPHITUS": 2.0,
+        "BELLAPHITUS OL": 1.0,
+        "BIOLAB GEN COMBATE": 1.0,
+        "CASADINHA QUENTE E FRIO": 2.0,
+        "CONECTADOS GEOLAB MARC": 1.0,
+        "CCM PROMOÇÃO": 2.0,
+        "COTAÇÃO FARMA": 1.0,
+        "COMBO BELFAR": 2.0,
+        "COMBO BELFAR 2": 2.0,
+        "COMBO FECHAMENTO 1": 2.0,
+        "COMBO INVERNO": 2.0,
+        "COMBO PARAC + DIPIMED": 2.0,
+        "COMBO MULTI": 1.0,
+        "DIA D ARTE NATIVA BRINDES": 2.0,
+        "DIA D LABOTRAT": 2.0,
+        "DIA D MERCUR": 2.0,
+        "FARMA 01 INTERIOR": 5.0,
+        "FARMA 02 INTERIOR": 4.0,
+        "FARMA 01": 4.5,
+        "FARMA 02": 3.5,
+        "FARMA 03": 3.0,
+        "FARMA 03 INTERIOR": 3.0,
+        "FECHA MES MERCUR": 2.0,
+        "GEOLAB OL MARÇO": 1.0,
+        "GEOLAB OL ABRIL": 1.0,
+        "HOSPITAL LOCAL": 2.0,
+        "LUPA DE LEITURA": 2.0,
+        "MAXINUTRI": 10.0,
+        "MERCUR 5": 5.0,
+        "MERCUR 7": 7.0,
+        "MULTI + ESPAÇADOR": 2.0,
+        "NEGOCIAÇÃO OL FARMA": 1.0,
+        "OFERTAS UNIPHAR ABRIL": 2.0,
+        "ORTOPEDICOS": 5.0,
+        "PED ELETRONICO - GD REDES": 3.0,
+        "PRE VENCIDOS - FARMA": 2.0,
+        "PROMOÇÃO DO DIA": 2.0,
+        "RANBAXY OPORTUNIDADE": 1.0,
+        "RANBAXY TS": 3.0,
+        "RANBAXY OL": 1.0,
+        "RANBAXY PROMO": 2.0,
+        "SUPER COMBO RILEX": 2.0,
+        "SUPER COMBO RILEX 2": 2.0,
+    },
+}
+
+POLICY_PERCENT = {
+    seller: {normalize_policy_name(pname): pct for pname, pct in policies.items()}
+    for seller, policies in RAW_POLICIES_PERCENT.items()
+}
+
+def fetch_political_detail_by_sellers(seller_codes, month, year):
+    if not seller_codes:
+        return []
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        placeholders = ",".join("?" for _ in seller_codes)
+
+        query = f"""
+        SELECT 
+            vvend.COD_VENDEDOR,
+            vend.Nome_Guerra,
+            vvend.COD_POLITICA,
+            vvend.VALOR_VENDA
+        FROM (
+            SELECT 
+                ANO           = YEAR(cb.Dat_Emissao),
+                MES           = MONTH(cb.Dat_Emissao),
+                COD_VENDEDOR  = cb.Cod_Vendedor, 
+                COD_POLITICA  = pc.Cod_PolCom,
+                VALOR_VENDA   = ROUND(
+                    SUM(it.Vlr_LiqItem
+                        - it.Vlr_SubsTrib
+                        - it.Vlr_SbtRes
+                        - it.Vlr_RecSbt
+                        - it.Vlr_SubsTribEmb
+                        - it.Vlr_DespRateada
+                        - ISNULL(it.Vlr_DspExt, 0)), 2)
+            FROM NFSCB cb 
+            JOIN NFSIT it
+              ON cb.Cod_Estabe = it.Cod_Estabe
+             AND cb.Ser_Nota   = it.Ser_Nota
+             AND cb.Num_Nota   = it.Num_Nota
+            JOIN POCOM pc
+              ON it.Id_PolCom = pc.Id_PolCom
+            WHERE cb.Status    = 'F'
+              AND cb.Tip_Saida = 'V'
+              AND cb.Dat_Emissao >= DATEFROMPARTS(?, ?, 1)
+              AND cb.Dat_Emissao <  DATEADD(MONTH, 1, DATEFROMPARTS(?, ?, 1))
+            GROUP BY cb.Cod_Vendedor, pc.Cod_PolCom, YEAR(cb.Dat_Emissao), MONTH(cb.Dat_Emissao)
+        ) AS vvend
+        JOIN V_VENDE AS vend
+          ON vvend.COD_VENDEDOR = vend.Codigo
+        WHERE vvend.COD_VENDEDOR IN ({placeholders})
+        ORDER BY vvend.COD_VENDEDOR, vvend.COD_POLITICA;
+        """
+
+        params = [int(year), int(month), int(year), int(month), *[int(c) for c in seller_codes]]
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        if not rows:
+            return []
+
+        sellers_data = {}
+        unknown = [] 
+
+        for row in rows:
+            try:
+                seller_id = int(row.COD_VENDEDOR)
+                seller_name = row.Nome_Guerra
+                policy_label = str(row.COD_POLITICA or "").strip()
+                liquid_sale = float(row.VALOR_VENDA or 0.0)
+            except AttributeError:
+                seller_id = int(row[0]); seller_name = row[1]
+                policy_label = str(row[2] or "").strip()
+                liquid_sale = float(row[3] or 0.0)
+
+            if seller_id not in sellers_data:
+                sellers_data[seller_id] = {
+                    "codigo_vendedor": seller_id,
+                    "vendedor": seller_name,
+                    "dados": [],
+                    "total_venda_liquida": 0.0,
+                    "total_valor": 0.0
+                }
+
+            pct = POLICY_PERCENT.get(seller_id, {}).get(normalize_policy_name(policy_label))
+            if pct is None:
+                unknown.append((seller_id, policy_label))
+                pct = 0.0
+
+            valor = liquid_sale * (pct / 100.0)
+
+            sellers_data[seller_id]["dados"].append({
+                "politica": policy_label,
+                "venda_liquida": round(liquid_sale, 2),
+                "percentual": pct,
+                "valor": round(valor, 2)
+            })
+            sellers_data[seller_id]["total_venda_liquida"] += liquid_sale
+            sellers_data[seller_id]["total_valor"] += valor
+
+        for s in sellers_data.values():
+            s["total_venda_liquida"] = round(s["total_venda_liquida"], 2)
+            s["total_valor"] = round(s["total_valor"], 2)
+
+        if unknown:
+            seen = set()
+            print("[WARN] Politicas sem mapeamento (vendedor, politica):")
+            for v, p in unknown:
+                key = (v, p.lower())
+                if key not in seen:
+                    seen.add(key)
+                    print(f"  - {v}: {p}")
+
+        result = list(sellers_data.values())
+        result.sort(key=lambda x: x["vendedor"]) 
+        return result
+
+    except Exception as e:
+        print(f"Erro ao buscar comissões: {e}")
+        return []
+
+
+# def fetch_commissions(seller_codes, month, year):
+#     connection = get_db_connection()
+#     cursor = connection.cursor()
+
+#     placeholders = ",".join(["?"] * len(seller_codes))
+
+#     query = f"""
+#         SELECT 
+#             vend.Nome_Guerra AS vendedor,
+#             dfab.FABRICANTE AS fabricante,
+#             vob.Val_Cota AS valor_cota,
+#             vob.Val_Realiz AS valor_realizado,
+#             vob.Val_Devol AS valor_devolucao,
+#             vob.Per_Cobert AS percentual_cobertura
+#         FROM dFABRICANTE AS dfab
+#         JOIN V_OBFAB AS vob
+#             ON dfab.IDFABRICANTE = vob.Cod_Fabricante
+#         JOIN V_VENDE AS vend
+#             ON vob.Cod_Vendedor = vend.Codigo
+#         WHERE vob.Ano_Ref = ?
+#           AND vob.Mes_Ref = ?
+#           AND vob.Cod_Vendedor IN ({placeholders})
+#         ORDER BY vend.Nome_Guerra ASC
+#     """
+
+#     params = [int(year), int(month)] + [int(c) for c in seller_codes]
+
+#     cursor.execute(query, params)
+#     rows = cursor.fetchall()
+
+#     sellers = {}
+
+#     for row in rows:
+
+#         vendedor = row.vendedor
+
+#         if vendedor not in sellers:
+#             sellers[vendedor] = {
+#                 "vendedor": vendedor,
+#                 "dados": [],
+#                 "total_realizado": 0,
+#                 "total_devolucao": 0,
+#                 "total_premiacao": 0
+#             }
+
+#         realizado = float(row.valor_realizado or 0) / 100
+#         devolucao = float(row.valor_devolucao or 0) / 100
+#         valor_cota = float(row.valor_cota or 0) / 100
+#         cobertura = float(row.percentual_cobertura or 0)
+#         fabricante = row.fabricante
+
+#         # 🔥 REGRAS DE PREMIAÇÃO
+#         if 100 <= cobertura <= 119:
+#             percentual_premio = 0.01
+#         elif 120 <= cobertura <= 149:
+#             percentual_premio = 0.02
+#         elif cobertura >= 150:
+#             percentual_premio = 0.03
+#         else:
+#             percentual_premio = 0
+
+#         venda_liquida = realizado - devolucao
+#         premiacao = venda_liquida * percentual_premio
+
+#         sellers[vendedor]["dados"].append({
+#             "fabricante": fabricante,
+#             "valor_cota": valor_cota,
+#             "valor_realizado": realizado,
+#             "percentual_cobertura": cobertura,
+#             "valor_devolucao": devolucao,
+#             "venda_liquida": venda_liquida,
+#             "percentual_premio": percentual_premio * 100,
+#             "valor_premiacao": premiacao
+#         })
+
+#         sellers[vendedor]["total_realizado"] += realizado
+#         sellers[vendedor]["total_devolucao"] += devolucao
+#         sellers[vendedor]["total_premiacao"] += premiacao
+
+#     connection.close()
+
+#     return list(sellers.values())
+
+def fetch_commissions(seller_codes, month, year):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    placeholders = ",".join(["?"] * len(seller_codes))
+
+    query = f""" 
+        SELECT 
+            vend.Nome_Guerra AS vendedor,
+            vob.Cod_Vendedor AS codigo_vendedor,
+            dfab.FABRICANTE  AS fabricante,
+            vob.Val_Cota     AS valor_cota,
+            vob.Val_Realiz   AS valor_realizado,
+            vob.Val_Devol    AS valor_devolucao,
+            vob.Per_Cobert   AS percentual_cobertura
+        FROM dFABRICANTE AS dfab
+        JOIN (
+            SELECT 
+                ct.Cod_Estabe,
+                ct.Cod_Vendedor,
+                ct.Cod_Fabricante,
+                Val_Cota   = ISNULL(ct.Vlr_Cota, 0) * 100, 
+                Val_Realiz = ISNULL(v.VlrLiq, 0),  
+                Val_Devol  = ISNULL(d.VlrDev, 0),  
+                Per_Cobert = CASE 
+                                WHEN ISNULL(ct.Vlr_Cota, 0) > 0
+                                THEN (ISNULL(v.VlrLiq, 0) - ISNULL(d.VlrDev, 0)) / ct.Vlr_Cota 
+                                ELSE 0 
+                              END,
+                ct.Ano_Ref,
+                ct.Mes_Ref
+            FROM VECOT ct
+            INNER JOIN VENDE ve 
+                ON ct.Cod_Vendedor = ve.Codigo
+            LEFT JOIN (
+                SELECT 
+                    cb.Cod_Estabe, 
+                    cb.Cod_Vendedor, 
+                    pr.Cod_Fabricante,
+                    SUM(
+                        it.Vlr_LiqItem
+                      - it.Vlr_SubsTrib
+                      - it.Vlr_SbtRes
+                      - it.Vlr_RecSbt
+                      - it.Vlr_SubsTribEmb
+                    ) * 100 AS VlrLiq,
+                    SUM(it.Qtd_Produto + it.Qtd_Bonificacao) AS UndVen
+                FROM NFSCB cb
+                INNER JOIN NFSIT it 
+                    ON cb.Cod_Estabe = it.Cod_Estabe 
+                   AND cb.Ser_Nota   = it.Ser_Nota 
+                   AND cb.Num_Nota   = it.Num_Nota
+                INNER JOIN VENDE vd 
+                    ON cb.Cod_Vendedor = vd.Codigo
+                INNER JOIN PRODU pr 
+                    ON it.Cod_Produto = pr.Codigo
+                WHERE YEAR(cb.Dat_Emissao) = ?
+                  AND MONTH(cb.Dat_Emissao) = ?
+                  AND cb.Status = 'F'
+                  AND cb.Tip_Saida = 'V'
+                  AND vd.Flg_Export = 1
+                GROUP BY cb.Cod_Estabe, cb.Cod_Vendedor, pr.Cod_Fabricante
+            ) v 
+                ON ct.Cod_Estabe   = v.Cod_Estabe
+               AND ct.Cod_Vendedor = v.Cod_Vendedor
+               AND ct.Cod_Fabricante = v.Cod_Fabricante
+            LEFT JOIN (
+                SELECT 
+                    cb.Cod_Estabe, 
+                    cb.Cod_Vendedor, 
+                    pr.Cod_Fabricante,
+                    SUM(
+                        it.Vlr_LiqIte
+                      - it.Vlr_SubsTrib
+                      - it.Vlr_DifTri
+                      - it.Vlr_DespRateada
+                      - it.Vlr_SbtRes
+                    ) * 100 AS VlrDev,
+                    SUM(it.Qtd_Pedido + it.Qtd_Bonificacao) AS UndDev
+                FROM NFECB cb
+                INNER JOIN NFEIT it 
+                    ON cb.Cod_Estabe = it.Cod_Estabe 
+                   AND cb.Protocolo  = it.Protocolo
+                INNER JOIN VENDE vd 
+                    ON cb.Cod_Vendedor = vd.Codigo
+                INNER JOIN PRODU pr 
+                    ON it.Cod_Produto = pr.Codigo
+                WHERE YEAR(cb.Dat_Movimento) = ?
+                  AND MONTH(cb.Dat_Movimento) = ?
+                  AND cb.Status = 'F'
+                  AND cb.Tip_NF = 'D'
+                  AND vd.Flg_Export = 1
+                GROUP BY cb.Cod_Estabe, cb.Cod_Vendedor, pr.Cod_Fabricante
+            ) d 
+                ON ct.Cod_Estabe   = d.Cod_Estabe
+               AND ct.Cod_Vendedor = d.Cod_Vendedor
+               AND ct.Cod_Fabricante = d.Cod_Fabricante
+            WHERE ve.Flg_Export = 1
+        ) AS vob
+            ON dfab.IDFABRICANTE = vob.Cod_Fabricante
+        JOIN V_VENDE AS vend
+            ON vob.Cod_Vendedor = vend.Codigo
+        WHERE vob.Ano_Ref = ?
+          AND vob.Mes_Ref = ?
+          AND vob.Cod_Vendedor IN ({placeholders})
+        ORDER BY vend.Nome_Guerra ASC;
+    """
+
+    params = [
+        int(year), int(month),
+        int(year), int(month),
+        int(year), int(month),
+        *[int(c) for c in seller_codes] 
+    ]
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    sellers = {}
+
+    for row in rows:
+        vendedor = row.vendedor
+        codigo_vendedor = row.codigo_vendedor
+
+        if vendedor not in sellers:
+            sellers[vendedor] = {
+                "vendedor": vendedor,
+                "codigo_vendedor": codigo_vendedor,
+                "dados": [],
+                "total_realizado": 0.0,
+                "total_devolucao": 0.0,
+                "total_premiacao": 0.0,
+                "total_realizado_geral": 0.0,
+                "objetivo_geral": 0.0,
+                "cobertura": 0.0
+            }
+
+        realizado   = float(row.valor_realizado or 0) / 100.0
+        devolucao   = float(row.valor_devolucao or 0) / 100.0
+        valor_cota  = float(row.valor_cota or 0) / 100.0
+        cobertura   = float(row.percentual_cobertura or 0)
+        fabricante  = row.fabricante
+
+        if 100 <= cobertura <= 119:
+            percentual_premio = 0.01
+        elif 120 <= cobertura <= 149:
+            percentual_premio = 0.02
+        elif cobertura >= 150:
+            percentual_premio = 0.03
+        else:
+            percentual_premio = 0.0
+
+        venda_liquida = realizado - devolucao
+        premiacao = venda_liquida * percentual_premio
+
+        sellers[vendedor]["dados"].append({
+            "fabricante": fabricante,
+            "valor_cota": valor_cota,
+            "valor_realizado": realizado,
+            "percentual_cobertura": cobertura,
+            "valor_devolucao": devolucao,
+            "venda_liquida": venda_liquida,
+            "percentual_premio": percentual_premio * 100,
+            "valor_premiacao": premiacao
+        })
+
+        sellers[vendedor]["total_realizado"] += realizado
+        sellers[vendedor]["total_devolucao"] += devolucao
+        sellers[vendedor]["total_premiacao"] += premiacao
+
+    query_totals = f"""
+        SELECT
+            v.Cod_Vendedor,
+            v.Total_Vendas,
+            ISNULL(o.Obj_Geral, 0) AS Obj_Geral
+        FROM (
+            SELECT 
+                cb.Cod_Vendedor,
+                ISNULL(ROUND(SUM(
+                    it.Vlr_LiqItem
+                  - it.Vlr_SubsTrib
+                  - it.Vlr_SbtRes
+                  - it.Vlr_RecSbt
+                  - it.Vlr_SubsTribEmb
+                  - it.Vlr_DespRateada
+                  - ISNULL(it.Vlr_DspExt, 0)
+                ), 2), 0) AS Total_Vendas
+            FROM NFSCB cb
+            INNER JOIN NFSIT it
+                ON cb.Cod_Estabe = it.Cod_Estabe
+               AND cb.Ser_Nota   = it.Ser_Nota
+               AND cb.Num_Nota   = it.Num_Nota
+            INNER JOIN POCOM pc
+                ON it.Id_PolCom = pc.Id_PolCom
+            WHERE cb.Status    = 'F'
+              AND cb.Tip_Saida = 'V'
+              AND cb.Dat_Emissao >= DATEFROMPARTS(?, ?, 1)
+              AND cb.Dat_Emissao <  DATEADD(MONTH, 1, DATEFROMPARTS(?, ?, 1))
+              AND cb.Cod_Vendedor IN ({placeholders})
+            GROUP BY cb.Cod_Vendedor
+        ) v
+        LEFT JOIN (
+            SELECT 
+                idvendedor,
+                MAX(obj.[VLR OBJETIVO]]]) AS Obj_Geral
+            FROM dbo.dOBJETIVO obj
+            WHERE obj.Mes = ?  -- (N+1) Mes
+              AND obj.Ano = ?  -- (N+2) Ano
+            GROUP BY idvendedor
+        ) o
+          ON o.idvendedor = v.Cod_Vendedor
+    """
+
+    params_totals = [
+        int(year), int(month),
+        int(year), int(month),
+        *[int(c) for c in seller_codes],
+        int(month), int(year)
+    ]
+
+    cursor.execute(query_totals, params_totals)
+    totals_rows = cursor.fetchall()
+
+    for row in totals_rows:
+        try:
+            codigo = row.Cod_Vendedor
+            total_realizado_geral = float(row.Total_Vendas or 0)
+            objetivo_geral = float(row.Obj_Geral or 0)
+        except AttributeError:
+            codigo = row[0]
+            total_realizado_geral = float(row[1] or 0)
+            objetivo_geral = float(row[2] or 0)
+
+        for vend_data in sellers.values():
+            if vend_data["codigo_vendedor"] == codigo:
+                vend_data["total_realizado_geral"] = total_realizado_geral
+                vend_data["objetivo_geral"] = objetivo_geral
+                vend_data["cobertura"] = (total_realizado_geral / objetivo_geral) * 100 if objetivo_geral > 0 else 0.0
+
+    connection.close()
+    return list(sellers.values())
+    
+def fetch_general_results(seller_codes, month, year):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    placeholders = ",".join(["?"] * len(seller_codes))
+
+    query = f"""
+        SELECT 
+            SUM(ven.VALOR_VENDA) AS total_realizado,
+            SUM(obj.OBJETIVO)    AS objetivo_geral
+        FROM (
+            SELECT
+                YEAR(cb.Dat_Emissao)  AS ANO,
+                MONTH(cb.Dat_Emissao) AS MES,
+                cb.Cod_Vendedor       AS COD_VENDEDOR,
+                ROUND(
+                    SUM(
+                        it.Vlr_LiqItem
+                        - it.Vlr_SubsTrib
+                        - it.Vlr_SbtRes
+                        - it.Vlr_RecSbt
+                        - it.Vlr_SubsTribEmb
+                        - it.Vlr_DespRateada
+                        - ISNULL(it.Vlr_DspExt, 0)
+                    ),
+                2) AS VALOR_VENDA
+            FROM NFSCB cb
+            INNER JOIN NFSIT it
+            ON cb.Cod_Estabe = it.Cod_Estabe
+            AND cb.Ser_Nota   = it.Ser_Nota
+            AND cb.Num_Nota   = it.Num_Nota
+            INNER JOIN POCOM pc
+            ON it.Id_PolCom = pc.Id_PolCom
+            WHERE cb.Status    = 'F'
+            AND cb.Tip_Saida = 'V'
+            AND cb.Dat_Emissao >= DATEFROMPARTS(?, ?, 1)
+            AND cb.Dat_Emissao <  DATEADD(MONTH, 1, DATEFROMPARTS(?, ?, 1))
+            GROUP BY
+                YEAR(cb.Dat_Emissao),
+                MONTH(cb.Dat_Emissao),
+                cb.Cod_Vendedor
+        ) AS ven
+        LEFT JOIN (
+            SELECT
+                obj.idvendedor,
+                obj.Mes,
+                obj.Ano,
+                MAX(obj.[VLR OBJETIVO]]]) AS OBJETIVO
+            FROM dbo.dOBJETIVO obj
+            GROUP BY obj.idvendedor, obj.Mes, obj.Ano
+        ) AS obj
+        ON obj.idvendedor = ven.COD_VENDEDOR
+        AND obj.Mes        = ven.MES
+        AND obj.Ano        = ven.ANO
+        WHERE ven.COD_VENDEDOR IN ({placeholders})
+        AND ven.MES = ? 
+        AND ven.ANO = ?;
+    """
+
+    params = [int(c) for c in seller_codes] + [int(month), int(year)]
+
+    cursor.execute(query, params)
+    row = cursor.fetchone()
+
+    total_realizado = float(row.total_realizado or 0)
+    objetivo_geral = float(row.objetivo_geral or 0)
+
+    cobertura = 0
+    if objetivo_geral > 0:
+        cobertura = (total_realizado / objetivo_geral) * 100
+
+    connection.close()
+
+    return {
+        "total_realizado": total_realizado,
+        "objetivo_geral": objetivo_geral,
+        "cobertura": cobertura
+    }
