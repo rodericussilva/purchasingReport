@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+    <title>Detalhe por Política</title>
+    <meta content="" name="description">
+    <meta content="" name="keywords">
+
+    <link href="/frontend/assets/img/logo-removebg-preview.png" rel="icon">
+
+    <link href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+    <link href="/frontend/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/frontend/assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <link href="/frontend/assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
+
+    <link href="/frontend/assets/css/style.css" rel="stylesheet">
+  </head>
+
+  <body>
+
+    <header id="header" class="header fixed-top d-flex align-items-center">
+
+      <div class="d-flex align-items-center justify-content-between">
+        <a href="/frontend/index.html" class="logo d-flex align-items-center">
+          <img src="/frontend/assets/img/logo-removebg-preview.png" alt="">
+          <span class="d-none d-lg-block">TS Distribuidora</span>
+        </a>
+      </div>
+
+      <div class="search-bar">
+        <form class="search-form d-flex align-items-center" method="POST" action="#">
+          <input type="text" name="query" placeholder="Pesquisar" title="Enter search keyword">
+          <button type="submit" title="Search"><i class="bi bi-search"></i></button>
+        </form>
+      </div>
+
+    </header>
+
+    <main id="main" class="main">
+
+      <div class="pagetitle">
+        <h1>Detalhe por Política</h1>
+        <nav>
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/frontend/index.html">Home</a></li>
+            <li class="breadcrumb-item">Vendedores</li>
+            <li class="breadcrumb-item active">Detalhe por Política</li>
+          </ol>
+        </nav>
+      </div>
+
+      <section class="section">
+        <div class="row">
+          <div class="col-lg-12">
+
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Detalhe por Política de Vendas</h5>
+
+                <div class="row mb-3">
+
+                  <div class="col-md-3">
+                    <label class="form-label text-light mt-2">Vendedores</label>
+                    <div class="dropdown">
+                      <button class="btn btn-success dropdown-toggle w-100" type="button"
+                        id="sellers-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Selecionar Vendedor
+                      </button>
+                      <div class="dropdown-menu w-100" aria-labelledby="sellers-dropdown">
+                        <div class="dropdown-item">
+                          <input type="checkbox" id="select-all" class="form-check-input me-2">
+                          <label for="select-all" class="form-check-label">Selecionar todos</label>
+                        </div>
+                        <div id="sellers-checkboxes">
+                          <!-- vendedores renderizados dinamicamente -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label for="select-month" class="form-label text-light mt-2">Mês</label>
+                    <select id="select-month" class="form-select">
+                      <option value="" disabled selected>Selecione um mês</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label for="select-year" class="form-label text-light mt-2">Ano</label>
+                    <select id="select-year" class="form-select">
+                      <option value="" disabled selected>Selecione um ano</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-3 d-grid">
+                    <label class="form-label text-light mt-2">&nbsp;</label>
+                    <button id="calculate-button" class="btn btn-danger">Calcular</button>
+                  </div>
+
+                </div>
+
+                <div id="results-section" style="display: none;">
+
+                  <div class="d-flex justify-content-end mb-3">
+                    <button id="export-excel-button" class="btn btn-success">
+                      <i class="bi bi-file-earmark-excel me-1"></i> Gerar Relatório Excel
+                    </button>
+                  </div>
+
+                  <div id="data-table"></div>
+
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="copyright">
+        &copy; Copyright <strong><span>TS Distribuidora</span></strong>. All Rights Reserved
+      </div>
+      <div class="credits">
+        Developed by RS
+      </div>
+    </footer>
+
+    <a href="#" class="back-to-top d-flex align-items-center justify-content-center">
+      <i class="bi bi-arrow-up-short"></i>
+    </a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="/frontend/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="./assets/js/main.js"></script>
+    <script src="./assets/js/config.js"></script>
+    <script src="./assets/js/political_detail.js"></script>
+
+  </body>
+
+</html>
