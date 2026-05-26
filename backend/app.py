@@ -1,13 +1,13 @@
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from models import fetch_suppliers, fetch_products_by_suppliers, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days
+from models import fetch_suppliers, fetch_sellers, fetch_products_by_suppliers, fetch_total_suggestions, fetch_products_and_calculate_rupture, fetch_total_rupture_risk, fetch_items_within_months, fetch_items_close_to_expiration, fetch_total_items_stopped, fetch_items_stopped_days, fetch_months_years_by_sellers, fetch_political_detail_by_sellers, fetch_commissions, fetch_general_results
 from routes.reports import report
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend')
 CORS(app)
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'reports_files')
@@ -24,6 +24,15 @@ def get_suppliers():
         suppliers = fetch_suppliers()
         return jsonify(suppliers), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/sellers', methods=['GET'])
+def get_sellers():
+    try:
+        sellers = fetch_sellers()
+        return jsonify(sellers), 200
+    except Exception as e:
+        print(f"Erro ao buscar vendedores: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/products', methods=['GET'])
@@ -158,6 +167,85 @@ def get_stagnant_items():
 
     except Exception as e:
         print(f"Erro ao buscar itens parados: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/sellers/periods', methods=['GET'])
+def get_months_years_by_sellers():
+    try:
+        seller_codes = request.args.getlist('seller_code[]')
+
+        if not seller_codes:
+            return jsonify({'error': 'Nenhum vendedor especificado'}), 400
+
+        seller_codes = [int(code) for code in seller_codes]
+
+        periods = fetch_months_years_by_sellers(seller_codes)
+
+        return jsonify(periods), 200
+
+    except Exception as e:
+        print(f"Erro ao buscar meses/anos: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/political-detail', methods=['GET'])
+def get_political_detail():
+    seller_codes = request.args.getlist('seller_code[]')
+    month = request.args.get('month')
+    year = request.args.get('year')
+
+    if not seller_codes or not month or not year:
+        return jsonify({"error": "Parâmetros obrigatórios faltando"}), 400
+
+    try:
+        seller_codes = list(map(int, seller_codes))
+        month = int(month)
+        year = int(year)
+
+        data = fetch_political_detail_by_sellers(seller_codes, month, year)
+
+        if not data:
+            return jsonify({"message": "Nenhum dado encontrado"}), 404
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"Erro ao calcular comissões: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/commissions', methods=['GET'])
+def get_commissions():
+    try:
+        seller_codes = request.args.getlist('seller_code[]')
+        month = request.args.get('month')
+        year = request.args.get('year')
+
+        if not seller_codes or not month or not year:
+            return jsonify({"error": "Parâmetros inválidos"}), 400
+
+        data = fetch_commissions(seller_codes, month, year)
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"Erro ao buscar detalhes por política: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/general-results', methods=['GET'])
+def get_general_results():
+    try:
+        seller_codes = request.args.getlist('seller_code[]')
+        month = request.args.get('month')
+        year = request.args.get('year')
+
+        if not seller_codes or not month or not year:
+            return jsonify({"error": "Parâmetros inválidos"}), 400
+
+        data = fetch_general_results(seller_codes, month, year)
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        print(f"Erro ao buscar resultados gerais: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
